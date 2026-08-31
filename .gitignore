@@ -1,0 +1,17 @@
+/build/
+/cmake-build-*/
+/out/
+/.idea/
+/.cache/
+compile_commands.json
+
+# Generated benchmark output. Keep only curated representative results.
+/results/*
+!/results/representative/
+!/results/representative/README.md
+
+# Tooling and editor artifacts.
+*.swp
+*.swo
+*~
+
