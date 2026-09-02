@@ -5,6 +5,11 @@
 /.cache/
 compile_commands.json
 
+# Private project planning and milestone notes.
+/notes/
+/plan.md
+/deep-research-report.md
+
 # Generated benchmark output. Keep only curated representative results.
 /results/*
 !/results/representative/
@@ -14,4 +19,3 @@ compile_commands.json
 *.swp
 *.swo
 *~
-

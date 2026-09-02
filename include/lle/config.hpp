@@ -16,7 +16,7 @@ struct Endpoint {
 struct SenderConfig {
     std::string ingress_shm_name;
     std::vector<Endpoint> receivers;
-    std::uint32_t max_datagram_bytes{1400};
+    std::uint32_t max_datagram_bytes{1416};
     std::uint32_t retransmit_window_packets{65'536};
     DeliveryMode delivery_mode{DeliveryMode::BestEffort};
     int cpu{-1};
@@ -35,4 +35,3 @@ struct ReceiverConfig {
 };
 
 } // namespace lle
-
