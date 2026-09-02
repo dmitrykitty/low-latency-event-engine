@@ -13,7 +13,7 @@ int main() {
     }
 
     const lle::SenderConfig config{};
-    if (config.max_datagram_bytes != 1400U) {
+    if (config.max_datagram_bytes != 1416U) {
         std::cerr << "unexpected default datagram cap\n";
         return EXIT_FAILURE;
     }
@@ -22,4 +22,3 @@ int main() {
     static_assert(sizeof(lle::StreamId) == 4U);
     return EXIT_SUCCESS;
 }
-

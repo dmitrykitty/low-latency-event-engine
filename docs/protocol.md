@@ -16,7 +16,8 @@ LLEP version 1 has these properties:
 - sequential event framing without an event-count field;
 - one stream per DATA packet;
 - event sequence and timestamp reconstruction from DATA-level base values;
-- bounded multi-range NACK messages.
+- bounded multi-range NACK messages;
+- no LLEP-level checksum.
 
 The 1,416-byte limit applies only to the LLEP packet. Outer transport and network headers are not included in `packet_length`.
 
@@ -89,13 +90,12 @@ The low four bits of the version/type byte provide 16 possible message types.
 | Value | Name | Meaning |
 |---:|---|---|
 | 0 | `INVALID` | Reserved and rejected |
-| 1 | `DATA` | Original packet containing one or more events |
-| 2 | `RETRANSMITTED_DATA` | Retransmission of an earlier DATA packet |
-| 3 | `NACK` | Request for one or more missing packet ranges |
-| 4-14 | Reserved | Future standard message types |
+| 1 | `DATA` | Packet containing one or more events |
+| 2 | `NACK` | Request for one or more missing packet ranges |
+| 3-14 | Reserved | Future standard message types |
 | 15 | `PRIVATE` | Reserved; rejected by the standard version-1 decoder |
 
-`DATA` and `RETRANSMITTED_DATA` have the same layout. A retransmission retains the original session ID, packet sequence, stream information, event information, and payload bytes.
+A retransmission is not a separate message type. It is the exact original encoded `DATA` packet sent again.
 
 ## 5. Common LLEP header
 
@@ -162,7 +162,7 @@ Type-specific minimum lengths are stricter.
 
 ## 6. DATA packet
 
-`DATA` and `RETRANSMITTED_DATA` use a 16-byte LLEP packet header followed by 20 bytes of DATA-level stream information and then event frames.
+`DATA` uses a 16-byte LLEP packet header followed by 20 bytes of DATA-level stream information and then event frames.
 
 ### 6.1 Sixteen-byte LLEP DATA header
 
@@ -231,13 +231,19 @@ first_event_sequence
 base_timestamp_ns
 ```
 
-`first_event_sequence` is scoped to `(session_id, stream_id)`. Events in a packet are consecutive. If event frame 0 has sequence `S`, frame `i` has sequence:
+`first_event_sequence` is scoped to `(session_id, stream_id)`; it is therefore a global sequence within one stream and sender session. Events in a packet are consecutive. If event frame 0 has sequence `S`, frame `i` has sequence:
 
 ```text
 event_sequence(i) = S + i
 ```
 
-The sender MUST start a new DATA packet when the next event belongs to another stream. This avoids repeating `stream_id` in every event frame.
+While building a packet containing `N` events, the next accepted event sequence MUST equal:
+
+```text
+first_event_sequence + N
+```
+
+If the next event sequence is not equal to that value, the sender MUST close the current packet and start a new DATA packet. The sender MUST also start a new DATA packet when the next event belongs to another stream. These rules preserve implicit event sequencing and avoid repeating `stream_id` in every event frame.
 
 ## 7. Event frame
 
@@ -281,6 +287,8 @@ source_timestamp_ns(i) = DATA.base_timestamp_ns + timestamp_delta_ns(i)
 ```
 
 The first event's timestamp delta MUST be zero. An encoder MUST start a new packet if a later timestamp is earlier than the base timestamp or its delta exceeds `UINT32_MAX` nanoseconds. Timestamp addition and event-sequence addition MUST be checked for overflow.
+
+`source_timestamp_ns` is producer-supplied metadata. LLEP preserves its numerical value but does not define its clock source, epoch, synchronization, accuracy, or monotonicity. A zero value is permitted and retains whatever meaning the producer assigns to it. Timestamps from different producer clock domains, including different hosts, MUST NOT be assumed to be directly comparable.
 
 An empty payload is valid. Padding bytes MUST be written as zero and are not part of the payload.
 
@@ -398,15 +406,13 @@ The maximum version-1 NACK has 64 ranges and is:
 8 + (64 * 10) = 648 bytes
 ```
 
+The first range's `first_sequence` begins at aligned offset 8. Because each range is 10 bytes, later `u64` values can be unaligned. This is intentional: DATA and event fields favor aligned access on the hot path, while the cold NACK recovery path favors compact records. NACK encoders and decoders MUST use explicit little-endian helpers that safely handle unaligned fields.
+
 ## 10. Retransmission
 
-`RETRANSMITTED_DATA` uses the exact DATA layout. Compared with the original packet:
+To retransmit a packet, the sender MUST send the exact original encoded `DATA` packet again. No byte, including the message type, packet length, metadata, event frame, or padding byte, is changed. A retransmission history can therefore retain and resend the already encoded datagram without mutation or re-encoding.
 
-- message type changes from `DATA` to `RETRANSMITTED_DATA`;
-- session ID and packet sequence remain unchanged;
-- DATA-level metadata and all event frames remain unchanged.
-
-Receivers identify duplicates by `(session_id, packet_sequence)`. Message type describes how the packet was sent; it is not the packet identity.
+The receiver identifies packet identity and duplicates by `(session_id, packet_sequence)`. Recovery state determines whether a repeated DATA packet satisfies a missing-packet request; no wire-level retransmission marker is required. Sender-side metrics MAY count retransmission attempts without changing the packet representation.
 
 ## 11. Packet-size limits
 
@@ -436,9 +442,33 @@ For a NACK packet:
 packet_length = 8 + (10 * range_count)
 ```
 
+### 11.1 Why the limit is 1,416 bytes
+
+The limit leaves headroom below a conventional 1,500-byte network MTU:
+
+```text
+LLEP packet              1416
+UDP header                  8
+IPv4 header                20
+------------------------------
+IPv4 total               1444
+
+LLEP packet              1416
+UDP header                  8
+IPv6 base header           40
+------------------------------
+IPv6 total               1464
+```
+
+Both totals remain below 1,500 bytes for ordinary headers. IP options, IPv6 extension headers, tunnels, and a smaller path MTU can reduce the available budget and are outside this protocol definition.
+
+LLEP version 1 does not define an application-level checksum. Integrity protection supplied by the enclosing transport, such as the UDP checksum, is outside LLEP. LLEP decoders still perform all structural validation defined below.
+
 ## 12. Validation
 
 A decoder validates the complete packet before exposing event payloads or processing NACK ranges.
+
+For DATA, an implementation can satisfy this requirement with two forward-only passes over the packet: the first validates every frame boundary, length, padding byte, and reconstructed-value overflow; the second exposes decoded event views. Deferred delivery after an equivalent complete validation is also valid. This deliberate all-or-nothing rule prevents early events from being delivered before a malformed later frame is discovered.
 
 ### 12.1 Common validation
 
@@ -494,8 +524,7 @@ LLEP_VERSION                     1
 
 MESSAGE_INVALID                  0
 MESSAGE_DATA                     1
-MESSAGE_RETRANSMITTED_DATA       2
-MESSAGE_NACK                     3
+MESSAGE_NACK                     2
 
 COMMON_HEADER_BYTES              8
 DATA_PACKET_HEADER_BYTES        16
