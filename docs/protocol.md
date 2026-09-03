@@ -4,15 +4,15 @@ Status: protocol version 1.
 
 LLEP is a compact binary protocol for transporting ordered streams of opaque events. This document defines only the LLEP representation. Shared-memory representation and synchronization are specified separately in `docs/memory-model.md`.
 
-## 1. Protocol properties
+## Protocol properties
 
-LLEP version 1 has these properties:
+LLEP:1.0.0 has these properties:
 
 - maximum LLEP packet size: 1,416 bytes;
 - little-endian encoding for every multi-byte integer;
 - one-byte magic followed by a four-bit version and four-bit message type;
 - no flag fields;
-- allocation-free encoding and decoding;
+- a layout designed to permit allocation-free encoding and decoding;
 - sequential event framing without an event-count field;
 - one stream per DATA packet;
 - event sequence and timestamp reconstruction from DATA-level base values;
@@ -21,13 +21,20 @@ LLEP version 1 has these properties:
 
 The 1,416-byte limit applies only to the LLEP packet. Outer transport and network headers are not included in `packet_length`.
 
-## 2. Terminology and byte order
+## Terminology, streams, and byte order
 
-The words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** describe normative requirements. All offsets are measured in bytes from the beginning of the enclosing packet or frame. 
+The words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** describe normative requirements. All offsets are measured in bytes from the beginning of the enclosing packet or frame.
+
+A **stream** is a logical ordered sequence of application events identified by `stream_id` within one sender `session_id`. A stream MAY span any number of DATA packets. DATA packets belonging to different streams MAY be interleaved because `packet_sequence` orders packets independently of `stream_id`.
+
+Event sequence values are producer-supplied application metadata. LLEP uses them to reconstruct the sequence of events batched into one DATA packet, but it does not use them for transport loss detection or recovery. Those operations use `packet_sequence`.
+
 Types named `u16`, `u32`, and `u64` are unsigned integers encoded in little-endian byte order.
 Encoders and decoders MUST use explicit integer helpers. They MUST NOT serialize native C++ structures, C++ bit fields, compiler padding, or packed structures directly.
 
-## 3. Message hierarchy and decoded views
+Alignment statements in this document describe offsets relative to the beginning of an LLEP packet. Such offsets permit naturally aligned access only when the underlying packet-buffer base is itself appropriately aligned.
+
+## Message hierarchy and decoded views
 
 LLEP has two decoding layers:
 
@@ -83,21 +90,21 @@ A packet does not need a second packet ID. The tuple:
 
 uniquely identifies a DATA packet. Packet identity belongs to the decoded DATA-packet view, not the public application event. Internal metrics MAY retain the containing packet identity alongside an event view without encoding it again in every event frame.
 
-## 4. Message types
+## Message types
 
 The low four bits of the version/type byte provide 16 possible message types.
 
-| Value | Name | Meaning |
-|---:|---|---|
-| 0 | `INVALID` | Reserved and rejected |
-| 1 | `DATA` | Packet containing one or more events |
-| 2 | `NACK` | Request for one or more missing packet ranges |
-| 3-14 | Reserved | Future standard message types |
-| 15 | `PRIVATE` | Reserved; rejected by the standard version-1 decoder |
+| Value | Name      | Meaning                                              |
+|------:|-----------|------------------------------------------------------|
+|     0 | `INVALID` | Reserved and rejected                                |
+|     1 | `DATA`    | Packet containing one or more events                 |
+|     2 | `NACK`    | Request for one or more missing packet ranges        |
+|  3-14 | Reserved  | Future standard message types                        |
+|    15 | `PRIVATE` | Reserved; rejected by the standard version-1 decoder |
 
 A retransmission is not a separate message type. It is the exact original encoded `DATA` packet sent again.
 
-## 5. Common LLEP header
+## Common LLEP header
 
 Every LLEP message begins with an 8-byte common header.
 
@@ -115,14 +122,14 @@ byte offset
 Common LLEP header: 8 bytes
 ```
 
-| Offset | Size | Field | Encoding |
-|---:|---:|---|---|
-| 0 | 1 | `magic` | Constant `0x4c`, ASCII `L` |
-| 1 | 1 | `version_and_type` | Version in high nibble, type in low nibble |
-| 2 | 2 | `packet_length` | Total LLEP packet length, `u16` |
-| 4 | 4 | `session_id` | Sender-session identifier, `u32` |
+| Offset | Size | Field              | Encoding                                   |
+|-------:|-----:|--------------------|--------------------------------------------|
+|      0 |    1 | `magic`            | Constant `0x4c`, ASCII `L`                 |
+|      1 |    1 | `version_and_type` | Version in high nibble, type in low nibble |
+|      2 |    2 | `packet_length`    | Total LLEP packet length, `u16`            |
+|      4 |    4 | `session_id`       | Sender-session identifier, `u32`           |
 
-### 5.1 Version and type byte
+### Version and type byte
 
 ```text
 bit       7 6 5 4 | 3 2 1 0
@@ -139,7 +146,7 @@ version = encoded >> 4U;
 message_type = encoded & 0x0fU;
 ```
 
-### 5.2 Packet length
+### Packet length
 
 `packet_length` includes every LLEP byte from `magic` through the final payload or alignment byte. It MUST equal the actual LLEP packet size and MUST satisfy:
 
@@ -149,22 +156,24 @@ message_type = encoded & 0x0fU;
 
 Type-specific minimum lengths are stricter.
 
-### 5.3 Session ID
+### Session ID
 
 `session_id` identifies one sender lifetime:
 
 - zero is invalid;
-- a sender chooses a new nonzero value on startup;
+- a sender chooses a new nonzero value on every startup;
+- the value SHOULD be selected pseudo-randomly to reduce accidental reuse across nearby sender lifetimes;
+- its purpose is temporal uniqueness and restart separation, not cryptographic security;
 - the value remains constant for that sender session;
 - packet and event sequences are interpreted only inside that session;
 - a NACK carries the session ID of the DATA packets it requests;
 - stale NACKs and DATA packets from another session are not combined with the active session.
 
-## 6. DATA packet
+## DATA packet
 
 `DATA` uses a 16-byte LLEP packet header followed by 20 bytes of DATA-level stream information and then event frames.
 
-### 6.1 Sixteen-byte LLEP DATA header
+### Sixteen-byte LLEP DATA header
 
 ```text
 byte offset
@@ -178,33 +187,33 @@ byte offset
 +---------------------------------------------------------------+
  8                                                              15
 +---------------------------------------------------------------+
-| packet_sequence (u64)                                        |
+| packet_sequence (u64)                                         |
 +---------------------------------------------------------------+
 
 LLEP DATA header: 16 bytes
 ```
 
-| Offset | Size | Field | Encoding |
-|---:|---:|---|---|
-| 0 | 8 | common LLEP header | Section 5 |
-| 8 | 8 | `packet_sequence` | `u64` |
+| Offset | Size | Field              | Encoding  |  
+|-------:|-----:|--------------------|-----------|
+|      0 |    8 | common LLEP header | Section 5 |
+|      8 |    8 | `packet_sequence`  | `u64`     |
 
-`packet_sequence` starts at 1 and increases by one for every new DATA packet in the session. It is global to the sender session, not per stream. Zero is invalid.
+`packet_sequence` starts at 1 and increases by one for every new DATA packet in the session. It is global to the sender session, not per stream. Zero is invalid. A sender MUST end the current session and select a new `session_id` before `packet_sequence` would wrap past `UINT64_MAX`.
 
 Because packet sequence is global, a NACK range is unambiguous and does not need a stream ID.
 
-### 6.2 DATA-level stream information
+### DATA-level stream information
 
 Every DATA packet contains events from exactly one stream.
 
 ```text
  16                                                             23
 +---------------------------------------------------------------+
-| first_event_sequence (u64)                                   |
+| first_event_sequence (u64)                                    |
 +---------------------------------------------------------------+
  24                                                             31
 +---------------------------------------------------------------+
-| base_timestamp_ns (u64)                                      |
+| base_timestamp_ns (u64)                                       |
 +---------------------------------------------------------------+
  32                                             35
 +-----------------------------------------------+
@@ -212,18 +221,18 @@ Every DATA packet contains events from exactly one stream.
 +-----------------------------------------------+
  36
 +-----------------------------------------------+
-| event frame 0 ...                            |
+| event frame 0 ...                             |
 +-----------------------------------------------+
 ```
 
-| Offset | Size | Field | Encoding |
-|---:|---:|---|---|
-| 16 | 8 | `first_event_sequence` | First event sequence in this packet, `u64` |
-| 24 | 8 | `base_timestamp_ns` | Timestamp of event frame 0, `u64` |
-| 32 | 4 | `stream_id` | Stream shared by all packet events, `u32` |
-| 36 | variable | `event_frames[]` | Sequential event records |
+| Offset |     Size | Field                  | Encoding                                   |
+|-------:|---------:|------------------------|--------------------------------------------|
+|     16 |        8 | `first_event_sequence` | First event sequence in this packet, `u64` |
+|     24 |        8 | `base_timestamp_ns`    | Timestamp of event frame 0, `u64`          |
+|     32 |        4 | `stream_id`            | Stream shared by all packet events, `u32`  |
+|     36 | variable | `event_frames[]`       | Sequential event records                   |
 
-The physical field order keeps both 64-bit values naturally aligned. The logical meaning remains:
+The physical field order places both 64-bit values at naturally aligned offsets, permitting naturally aligned access when the packet-buffer base is aligned to at least 8 bytes. The logical meaning remains:
 
 ```text
 stream_id
@@ -231,7 +240,7 @@ first_event_sequence
 base_timestamp_ns
 ```
 
-`first_event_sequence` is scoped to `(session_id, stream_id)`; it is therefore a global sequence within one stream and sender session. Events in a packet are consecutive. If event frame 0 has sequence `S`, frame `i` has sequence:
+`first_event_sequence` is producer-supplied metadata scoped to `(session_id, stream_id)`. Events batched into one packet are consecutive. If event frame 0 has sequence `S`, frame `i` has sequence:
 
 ```text
 event_sequence(i) = S + i
@@ -245,7 +254,9 @@ first_event_sequence + N
 
 If the next event sequence is not equal to that value, the sender MUST close the current packet and start a new DATA packet. The sender MUST also start a new DATA packet when the next event belongs to another stream. These rules preserve implicit event sequencing and avoid repeating `stream_id` in every event frame.
 
-## 7. Event frame
+This consecutive-sequence requirement applies only while events are being batched into the same DATA packet. LLEP does not require the first event sequence of a later packet for the same stream to follow the final event sequence of an earlier packet. A cross-packet discontinuity is legal producer/application metadata and MUST NOT be interpreted as transport loss or cause a NACK.
+
+## Event frame
 
 An event frame stores only information that cannot be reconstructed from the containing DATA packet.
 
@@ -263,12 +274,12 @@ frame-relative offset
 +---------------------------------------------------------------+
 ```
 
-| Offset | Size | Field | Encoding |
-|---:|---:|---|---|
-| 0 | 4 | `timestamp_delta_ns` | Nanoseconds after the packet base timestamp, `u32` |
-| 4 | 2 | `payload_length` | Number of payload bytes, `u16` |
-| 6 | variable | `payload` | Opaque application bytes |
-| variable | 0-3 | padding | Zero bytes to align the next frame to 4 bytes |
+|   Offset |     Size | Field                | Encoding                                           |
+|---------:|---------:|----------------------|----------------------------------------------------|
+|        0 |        4 | `timestamp_delta_ns` | Nanoseconds after the packet base timestamp, `u32` |
+|        4 |        2 | `payload_length`     | Number of payload bytes, `u16`                     |
+|        6 | variable | `payload`            | Opaque application bytes                           |
+| variable |      0-3 | padding              | Zero bytes to align the next frame to 4 bytes      |
 
 The frame size is:
 
@@ -276,7 +287,7 @@ The frame size is:
 frame_size = align_up(6 + payload_length, 4)
 ```
 
-Event frames begin on 4-byte boundaries. This naturally aligns `timestamp_delta_ns` while adding at most three bytes of padding per event.
+Event frames begin at offsets divisible by four. This permits naturally aligned access to `timestamp_delta_ns` when the packet-buffer base is appropriately aligned, while adding at most three bytes of padding per event.
 
 For event index `i`:
 
@@ -294,7 +305,7 @@ An empty payload is valid. Padding bytes MUST be written as zero and are not par
 
 There is no event-count field. The decoder starts at offset 36 and parses complete frames until it reaches `packet_length`. The final padded frame MUST end exactly at that boundary.
 
-## 8. Complete DATA layout
+## Complete DATA layout
 
 ```text
 +================================================================+
@@ -351,12 +362,12 @@ byte offset
 +===============================================================+
 ```
 
-### 9.1 Missing range
+### Missing range
 
-| Range-relative offset | Size | Field | Encoding |
-|---:|---:|---|---|
-| 0 | 8 | `first_sequence` | First missing packet sequence, `u64` |
-| 8 | 2 | `packet_count` | Number of consecutive missing packets, `u16` |
+| Range-relative offset | Size | Field            | Encoding                                     |
+|----------------------:|-----:|------------------|----------------------------------------------|
+|                     0 |    8 | `first_sequence` | First missing packet sequence, `u64`         |
+|                     8 |    2 | `packet_count`   | Number of consecutive missing packets, `u16` |
 
 One range requests the inclusive interval:
 
@@ -373,7 +384,7 @@ packet_count   = 3
 requested packets = 100, 101, 102
 ```
 
-### 9.2 Number of ranges
+### Number of ranges
 
 The number of ranges is calculated from the packet length:
 
@@ -408,13 +419,13 @@ The maximum version-1 NACK has 64 ranges and is:
 
 The first range's `first_sequence` begins at aligned offset 8. Because each range is 10 bytes, later `u64` values can be unaligned. This is intentional: DATA and event fields favor aligned access on the hot path, while the cold NACK recovery path favors compact records. NACK encoders and decoders MUST use explicit little-endian helpers that safely handle unaligned fields.
 
-## 10. Retransmission
+## Retransmission
 
 To retransmit a packet, the sender MUST send the exact original encoded `DATA` packet again. No byte, including the message type, packet length, metadata, event frame, or padding byte, is changed. A retransmission history can therefore retain and resend the already encoded datagram without mutation or re-encoding.
 
 The receiver identifies packet identity and duplicates by `(session_id, packet_sequence)`. Recovery state determines whether a repeated DATA packet satisfies a missing-packet request; no wire-level retransmission marker is required. Sender-side metrics MAY count retransmission attempts without changing the packet representation.
 
-## 11. Packet-size limits
+## Packet-size limits
 
 ```text
 MAX_LLEP_PACKET_BYTES = 1416
@@ -464,13 +475,13 @@ Both totals remain below 1,500 bytes for ordinary headers. IP options, IPv6 exte
 
 LLEP version 1 does not define an application-level checksum. Integrity protection supplied by the enclosing transport, such as the UDP checksum, is outside LLEP. LLEP decoders still perform all structural validation defined below.
 
-## 12. Validation
+## Validation
 
 A decoder validates the complete packet before exposing event payloads or processing NACK ranges.
 
 For DATA, an implementation can satisfy this requirement with two forward-only passes over the packet: the first validates every frame boundary, length, padding byte, and reconstructed-value overflow; the second exposes decoded event views. Deferred delivery after an equivalent complete validation is also valid. This deliberate all-or-nothing rule prevents early events from being delivered before a malformed later frame is discovered.
 
-### 12.1 Common validation
+### Common validation
 
 1. At least 8 bytes are present.
 2. `magic == 0x4c`.
@@ -481,7 +492,7 @@ For DATA, an implementation can satisfy this requirement with two forward-only p
 7. `session_id != 0`.
 8. All type-specific rules pass.
 
-### 12.2 DATA validation
+### DATA validation
 
 1. At least 44 bytes are present.
 2. `packet_sequence != 0`.
@@ -492,7 +503,7 @@ For DATA, an implementation can satisfy this requirement with two forward-only p
 7. Reconstructed timestamps and event sequences do not overflow.
 8. The final frame ends exactly at `packet_length`.
 
-### 12.3 NACK validation
+### NACK validation
 
 1. At least one complete 10-byte range is present.
 2. The body length is divisible by 10.
@@ -504,7 +515,7 @@ For DATA, an implementation can satisfy this requirement with two forward-only p
 
 A malformed packet is rejected as a whole. No event from a partially valid DATA packet is delivered.
 
-## 13. Version behavior
+## Version behavior
 
 Version zero is invalid. Version 1 is defined by this document. Other versions are rejected; version negotiation is not defined.
 
