@@ -1,7 +1,22 @@
 BasedOnStyle: LLVM
 IndentWidth: 4
-ColumnLimit: 100
+ContinuationIndentWidth: 4
+ColumnLimit: 96
+AlignAfterOpenBracket: BlockIndent
 DerivePointerAlignment: false
 PointerAlignment: Left
 SortIncludes: CaseSensitive
+AllowShortFunctionsOnASingleLine: Empty
 
+# Keep short declarations and calls on one line. Once they exceed the
+# column limit, place every parameter or argument on its own line.
+BinPackParameters: OnePerLine
+AllowAllParametersOfDeclarationOnNextLine: false
+BreakFunctionDefinitionParameters: false
+BinPackArguments: false
+AllowAllArgumentsOnNextLine: false
+
+# Use one initializer per line when a constructor initializer list wraps.
+BreakConstructorInitializers: BeforeColon
+ConstructorInitializerIndentWidth: 4
+PackConstructorInitializers: Never

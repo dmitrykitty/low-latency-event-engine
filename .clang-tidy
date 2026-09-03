@@ -7,7 +7,9 @@ Checks: >-
   performance-*,
   portability-*,
   -cppcoreguidelines-avoid-magic-numbers,
-  -cppcoreguidelines-owning-memory
+  -cppcoreguidelines-owning-memory,
+  -modernize-use-trailing-return-type,
+  -modernize-use-designated-initializers
 WarningsAsErrors: ''
 HeaderFilterRegex: '^(include|src|apps|tests)/'
 FormatStyle: file
