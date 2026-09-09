@@ -1,7 +1,7 @@
 #pragma once
 
-#include <atomic>
 #include <cstddef>
+#include <cstdint>
 #include <expected>
 #include <span>
 #include <string>
@@ -9,7 +9,7 @@
 
 namespace lle::shm {
 
-enum class SegmentOperation : uint8_t {
+enum class SegmentOperation : std::uint8_t {
     Validate,
     Open,
     Resize,
@@ -17,8 +17,7 @@ enum class SegmentOperation : uint8_t {
     Map,
     Unmap,
     Close,
-    Unlink,
-    Attach
+    Unlink
 };
 
 struct SegmentError {
@@ -44,7 +43,7 @@ class SharedMemorySegment {
     SharedMemorySegment(SharedMemorySegment&& other) noexcept;
     SharedMemorySegment& operator=(SharedMemorySegment&& other) noexcept;
 
-    std::expected<void, SegmentError> close() noexcept;
+    std::expected<void, SegmentError> close_shm() noexcept;
     std::expected<void, SegmentError> unlink() noexcept;
 
     // inline getters

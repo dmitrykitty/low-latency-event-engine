@@ -12,7 +12,7 @@ namespace lle::shm {
 
 namespace {
 
-void close_descriptor(int descriptor) {
+void close_descriptor(int descriptor) noexcept {
     static_cast<void>(close(descriptor));
 }
 
@@ -25,7 +25,7 @@ void clean_up_failed_creation(const std::string& name, int descriptor) noexcept 
 
 std::expected<SharedMemorySegment, SegmentError>
 SharedMemorySegment::create_shm(std::string name, std::size_t size) noexcept {
-    if (!is_shm_name_valid(name)) {
+    if (!is_shm_name_valid(name) || size == 0) {
         return std::unexpected(
             SegmentError{.operation = SegmentOperation::Validate, .error_number = EINVAL}
         );
@@ -82,7 +82,7 @@ SharedMemorySegment::SharedMemorySegment(
       linked_(true) {}
 
 SharedMemorySegment::~SharedMemorySegment() {
-    static_cast<void>(close());
+    static_cast<void>(close_shm());
 }
 
 SharedMemorySegment::SharedMemorySegment(SharedMemorySegment&& other) noexcept
@@ -98,7 +98,7 @@ SharedMemorySegment& SharedMemorySegment::operator=(SharedMemorySegment&& other)
         return *this;
     }
 
-    static_cast<void>(close());
+    static_cast<void>(close_shm());
 
     name_ = std::move(other.name_);
     descriptor_ = std::exchange(other.descriptor_, -1);
@@ -109,7 +109,7 @@ SharedMemorySegment& SharedMemorySegment::operator=(SharedMemorySegment&& other)
     return *this;
 }
 
-std::expected<void, SegmentError> SharedMemorySegment::close() noexcept {
+std::expected<void, SegmentError> SharedMemorySegment::close_shm() noexcept {
     int unmap_error = 0;
 
     if (address_ != nullptr) {
@@ -123,7 +123,7 @@ std::expected<void, SegmentError> SharedMemorySegment::close() noexcept {
 
     int close_error = 0;
     if (descriptor_ != -1) {
-        if (::close(descriptor_) == -1) {
+        if (close(descriptor_) == -1) {
             close_error = errno;
         }
         descriptor_ = -1;
@@ -138,7 +138,7 @@ std::expected<void, SegmentError> SharedMemorySegment::close() noexcept {
         return std::unexpected(
             SegmentError{.operation = SegmentOperation::Close, .error_number = close_error}
         );
-    };
+    }
     return {};
 }
 
@@ -171,7 +171,7 @@ std::expected<SharedMemorySegment, SegmentError>
 SharedMemorySegment::attach_shm(std::string name) noexcept {
     if (!is_shm_name_valid(name)) {
         return std::unexpected(
-            SegmentError{.operation = SegmentOperation::Validate, .error_number = errno}
+            SegmentError{.operation = SegmentOperation::Validate, .error_number = EINVAL}
         );
     }
 
@@ -191,22 +191,20 @@ SharedMemorySegment::attach_shm(std::string name) noexcept {
         );
     }
 
-    const __off_t sz = status.st_size;
-    if (sz <= 0) {
+    if (status.st_size <= 0) {
         close_descriptor(descriptor);
         return std::unexpected(
-            SegmentError{.operation = SegmentOperation::Attach, .error_number = EINVAL}
+            SegmentError{.operation = SegmentOperation::Validate, .error_number = EINVAL}
         );
     }
 
-    const auto size = static_cast<std::size_t>(sz);
-
+    const auto size = static_cast<std::size_t>(status.st_size);
     void* const mapping =
         mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, descriptor, 0);
 
     if (mapping == MAP_FAILED) {
         const int error_number = errno;
-        clean_up_failed_creation(name, descriptor);
+        close_descriptor(descriptor);
         return std::unexpected(
             SegmentError{.operation = SegmentOperation::Map, .error_number = error_number}
         );
