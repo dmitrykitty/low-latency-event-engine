@@ -2,23 +2,18 @@
 #include "lle/event.hpp"
 #include "lle/version.hpp"
 
-#include <cstdlib>
-#include <iostream>
-#include <string_view>
+#include <gtest/gtest.h>
 
-int main() {
-    if (lle::version().empty()) {
-        std::cerr << "project version must not be empty\n";
-        return EXIT_FAILURE;
-    }
+TEST(ProjectSmokeTest, VersionIsNotEmpty) {
+    EXPECT_FALSE(lle::version().empty());
+}
 
+TEST(ProjectSmokeTest, DefaultDatagramLimitMatchesProtocol) {
     const lle::SenderConfig config{};
-    if (config.max_datagram_bytes != 1416U) {
-        std::cerr << "unexpected default datagram cap\n";
-        return EXIT_FAILURE;
-    }
+    EXPECT_EQ(config.max_datagram_bytes, 1416U);
+}
 
-    static_assert(sizeof(lle::Sequence) == 8U);
-    static_assert(sizeof(lle::StreamId) == 4U);
-    return EXIT_SUCCESS;
+TEST(ProjectSmokeTest, PublicIdentifierWidthsMatchProtocol) {
+    EXPECT_EQ(sizeof(lle::Sequence), 8U);
+    EXPECT_EQ(sizeof(lle::StreamId), 4U);
 }
