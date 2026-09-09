@@ -18,6 +18,7 @@ enum class SegmentOperation : uint8_t {
     Unmap,
     Close,
     Unlink,
+    Attach
 };
 
 struct SegmentError {

@@ -6,15 +6,18 @@
 #include "shm/segment.hpp"
 
 #include <cerrno>
-#include <limits>
 #include <utility>
 
 namespace lle::shm {
 
 namespace {
 
-void clean_up_failed_creation(const std::string& name, int descriptor) noexcept {
+void close_descriptor(int descriptor) {
     static_cast<void>(close(descriptor));
+}
+
+void clean_up_failed_creation(const std::string& name, int descriptor) noexcept {
+    close_descriptor(descriptor);
     static_cast<void>(shm_unlink(name.c_str()));
 }
 
@@ -22,8 +25,7 @@ void clean_up_failed_creation(const std::string& name, int descriptor) noexcept 
 
 std::expected<SharedMemorySegment, SegmentError>
 SharedMemorySegment::create_shm(std::string name, std::size_t size) noexcept {
-    if (!is_shm_name_valid(name) || size == 0 ||
-        size > static_cast<std::size_t>(std::numeric_limits<off_t>::max())) {
+    if (!is_shm_name_valid(name)) {
         return std::unexpected(
             SegmentError{.operation = SegmentOperation::Validate, .error_number = EINVAL}
         );
@@ -151,7 +153,7 @@ std::expected<void, SegmentError> SharedMemorySegment::unlink() noexcept {
         return {};
     }
 
-    if (::shm_unlink(name_.c_str()) == -1) {
+    if (shm_unlink(name_.c_str()) == -1) {
         if (errno == ENOENT) {
             linked_ = false;
             return {};
@@ -163,6 +165,60 @@ std::expected<void, SegmentError> SharedMemorySegment::unlink() noexcept {
 
     linked_ = false;
     return {};
+}
+
+std::expected<SharedMemorySegment, SegmentError>
+SharedMemorySegment::attach_shm(std::string name) noexcept {
+    if (!is_shm_name_valid(name)) {
+        return std::unexpected(
+            SegmentError{.operation = SegmentOperation::Validate, .error_number = errno}
+        );
+    }
+
+    const int descriptor = shm_open(name.c_str(), O_RDWR | O_CLOEXEC, 0);
+    if (descriptor == -1) {
+        return std::unexpected(
+            SegmentError{.operation = SegmentOperation::Open, .error_number = errno}
+        );
+    }
+
+    struct stat status{};
+    if (fstat(descriptor, &status) == -1) {
+        const int error_number = errno;
+        close_descriptor(descriptor);
+        return std::unexpected(
+            SegmentError{.operation = SegmentOperation::Stat, .error_number = error_number}
+        );
+    }
+
+    const __off_t sz = status.st_size;
+    if (sz <= 0) {
+        close_descriptor(descriptor);
+        return std::unexpected(
+            SegmentError{.operation = SegmentOperation::Attach, .error_number = EINVAL}
+        );
+    }
+
+    const auto size = static_cast<std::size_t>(sz);
+
+    void* const mapping =
+        mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, descriptor, 0);
+
+    if (mapping == MAP_FAILED) {
+        const int error_number = errno;
+        clean_up_failed_creation(name, descriptor);
+        return std::unexpected(
+            SegmentError{.operation = SegmentOperation::Map, .error_number = error_number}
+        );
+    }
+
+    return SharedMemorySegment(
+        std::move(name),
+        descriptor,
+        static_cast<std::byte*>(mapping),
+        size,
+        false
+    );
 }
 
 bool SharedMemorySegment::is_shm_name_valid(std::string_view name) noexcept {
