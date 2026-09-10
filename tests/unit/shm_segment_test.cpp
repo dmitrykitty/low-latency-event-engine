@@ -194,4 +194,82 @@ TEST_F(SharedMemorySegmentTest, MoveConstructionTransfersResources) {
     EXPECT_EQ(moved.size(), 4096U);
 }
 
+TEST_F(SharedMemorySegmentTest, MoveAssignmentTransfersResources) {
+    auto original = SharedMemorySegment::create_shm(name_, 4096);
+    ASSERT_TRUE(original.has_value());
+    original->bytes()[0] = std::byte{0x2a};
+    auto destination = SharedMemorySegment::attach_shm(name_);
+    ASSERT_TRUE(destination.has_value());
+    const auto* const original_address = original->bytes().data();
+
+    *destination = std::move(*original);
+
+    EXPECT_FALSE(original->is_open());
+    EXPECT_FALSE(original->is_owner());
+    EXPECT_EQ(original->size(), 0U);
+    EXPECT_TRUE(original->bytes().empty());
+    ASSERT_TRUE(destination->is_open());
+    EXPECT_TRUE(destination->is_owner());
+    ASSERT_EQ(destination->size(), 4096U);
+    EXPECT_EQ(destination->bytes().data(), original_address);
+    EXPECT_EQ(destination->bytes()[0], std::byte{0x2a});
+    ASSERT_TRUE(original->close_shm().has_value());
+    EXPECT_EQ(destination->bytes()[0], std::byte{0x2a});
+    ASSERT_TRUE(destination->unlink().has_value());
+    const auto attached = SharedMemorySegment::attach_shm(name_);
+    ASSERT_FALSE(attached.has_value());
+    EXPECT_EQ(attached.error().error_number, ENOENT);
+}
+
+TEST_F(SharedMemorySegmentTest, UnlinkIsIdempotent) {
+    auto created = SharedMemorySegment::create_shm(name_, 4096);
+    ASSERT_TRUE(created.has_value());
+
+    ASSERT_TRUE(created->unlink().has_value());
+    EXPECT_TRUE(created->unlink().has_value());
+    const auto attached = SharedMemorySegment::attach_shm(name_);
+    ASSERT_FALSE(attached.has_value());
+    EXPECT_EQ(attached.error().error_number, ENOENT);
+
+    // A repeated unlink must not remove a new segment that reuses the name.
+    auto replacement = SharedMemorySegment::create_shm(name_, 4096);
+    ASSERT_TRUE(replacement.has_value());
+    EXPECT_TRUE(created->unlink().has_value());
+    EXPECT_TRUE(SharedMemorySegment::attach_shm(name_).has_value());
+}
+
+TEST_F(SharedMemorySegmentTest, CloseThenUnlinkStillWorks) {
+    auto created = SharedMemorySegment::create_shm(name_, 4096);
+    ASSERT_TRUE(created.has_value());
+
+    ASSERT_TRUE(created->close_shm().has_value());
+    EXPECT_FALSE(created->is_open());
+    EXPECT_TRUE(created->is_owner());
+    ASSERT_TRUE(SharedMemorySegment::attach_shm(name_).has_value());
+    ASSERT_TRUE(created->unlink().has_value());
+
+    const auto attached = SharedMemorySegment::attach_shm(name_);
+    ASSERT_FALSE(attached.has_value());
+    EXPECT_EQ(attached.error().operation, SegmentOperation::Open);
+    EXPECT_EQ(attached.error().error_number, ENOENT);
+}
+
+TEST_F(SharedMemorySegmentTest, MovedFromOwnerCannotUnlink) {
+    auto original = SharedMemorySegment::create_shm(name_, 4096);
+    ASSERT_TRUE(original.has_value());
+    SharedMemorySegment moved{std::move(*original)};
+
+    const auto result = original->unlink();
+
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(result.error().operation, SegmentOperation::Unlink);
+    EXPECT_EQ(result.error().error_number, EPERM);
+    EXPECT_FALSE(original->is_owner());
+    EXPECT_TRUE(SharedMemorySegment::attach_shm(name_).has_value());
+    ASSERT_TRUE(moved.unlink().has_value());
+    const auto attached = SharedMemorySegment::attach_shm(name_);
+    ASSERT_FALSE(attached.has_value());
+    EXPECT_EQ(attached.error().error_number, ENOENT);
+}
+
 } // namespace
