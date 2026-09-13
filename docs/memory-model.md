@@ -2,7 +2,9 @@
 
 Status: shared-memory ABI version 1.
 
-This document specifies LLE's local POSIX shared-memory SPSC queue. It is independent from the Low-Latency Event Protocol defined in `docs/protocol.md`; LLEP packet headers, message types, packet sequences, NACKs, and network session IDs are not stored in shared-memory event slots.
+This document specifies LLE's local POSIX shared-memory SPSC queue. It is independent from the Low-Latency Event
+Protocol defined in `docs/protocol.md`; LLEP packet headers, message types, packet sequences, NACKs, and network session
+IDs are not stored in shared-memory event slots.
 
 ## Requirements
 
@@ -17,7 +19,8 @@ The queue is designed for:
 - release/acquire publication;
 - explicit creation, attachment, close, and unlink ownership.
 
-The shared-memory ABI uses native fixed-width integer representation. Version 1 requires a little-endian Linux host and lock-free 32-bit and 64-bit integral atomics.
+The shared-memory ABI uses native fixed-width integer representation. Version 1 requires a little-endian Linux host and
+lock-free 32-bit and 64-bit integral atomics.
 
 ## Segment layout
 
@@ -64,9 +67,11 @@ All major regions and every slot begin on a 64-byte boundary.
 |     40 |    4 | atomic `uint32` | `state`                 |
 |     44 |   20 | bytes           | reserved, zero          |
 
-The shared-memory magic is required because a named object can outlive a process or be opened using the wrong configured name.
+The shared-memory magic is required because a named object can outlive a process or be opened using the wrong configured
+name.
 
-`instance_id` is a random nonzero generation identifier chosen when the owner initializes a new segment. It is not an LLEP network session ID.
+`instance_id` is a random nonzero generation identifier chosen when the owner initializes a new segment. It is not an
+LLEP network session ID.
 
 The reserved preamble field must be zero in layout version 1.
 
@@ -76,7 +81,8 @@ The mapped object size is exactly:
 segment_bytes = header_bytes + slot_count * slot_stride
 ```
 
-Every addition and multiplication used to validate this expression must be checked for overflow and compared with the actual mapped-object size.
+Every addition and multiplication used to validate this expression must be checked for overflow and compared with the
+actual mapped-object size.
 
 ## 4. Segment state
 
@@ -87,9 +93,11 @@ Every addition and multiplication used to validate this expression must be check
 |     2 | `READY`         | Producer and consumer may operate                 |
 |     3 | `CLOSED`        | Owner has stopped publication                     |
 
-The creator is the only initializer. It initializes metadata, cursors, and slots before release-storing `READY`. Attachers acquire-load `state` and validate metadata after observing `READY`.
+The creator is the only initializer. It initializes metadata, cursors, and slots before release-storing `READY`.
+Attachers acquire-load `state` and validate metadata after observing `READY`.
 
-`INITIALIZING` is reported as not ready. It is never treated as an empty valid queue. The owner release-stores `CLOSED`; the consumer acquire-loads it when deciding whether an empty queue can receive more events.
+`INITIALIZING` is reported as not ready. It is never treated as an empty valid queue. The owner release-stores `CLOSED`;
+the consumer acquire-loads it when deciding whether an empty queue can receive more events.
 
 ## Cursor layout
 
@@ -107,7 +115,8 @@ offset 128
 +---------------------------------------------------------------+
 ```
 
-Only the producer writes `write_position`. Only the consumer writes `read_position`. Keeping them on separate cache lines prevents the routine writes from invalidating one shared cache line.
+Only the producer writes `write_position`. Only the consumer writes `read_position`. Keeping them on separate cache
+lines prevents the routine writes from invalidating one shared cache line.
 
 Both positions begin at zero and count logical slots rather than physical array indices.
 
@@ -124,7 +133,8 @@ empty when write_position == read_position
 full  when write_position - read_position == slot_count
 ```
 
-The distance between cursors must remain between zero and `slot_count`, inclusive. A segment is replaced before a 64-bit cursor wraps.
+The distance between cursors must remain between zero and `slot_count`, inclusive. A segment is replaced before a 64-bit
+cursor wraps.
 
 ## Slot layout
 
@@ -172,7 +182,8 @@ Slot stride is:
 slot_stride = align_up(32 + slot_payload_capacity, 64)
 ```
 
-`payload_length` cannot exceed `slot_payload_capacity`. Unused payload capacity and stride padding have no semantic value and do not need to be cleared for every publication.
+`payload_length` cannot exceed `slot_payload_capacity`. Unused payload capacity and stride padding have no semantic
+value and do not need to be cleared for every publication.
 
 Shared memory contains no pointers, `std::span`, `std::size_t`, compiler-dependent enums, or variable-size C++ objects.
 
@@ -199,7 +210,8 @@ Publication results are:
 | `PayloadTooLarge` | Payload does not fit; queue state is unchanged |
 | `Closed`          | Segment is not ready for publication           |
 
-The queue never overwrites an unread slot. Spin, retry, or drop behavior belongs to the adapter above the one-attempt publication API.
+The queue never overwrites an unread slot. Spin, retry, or drop behavior belongs to the adapter above the one-attempt
+publication API.
 
 ## Consumer acquisition and release
 
@@ -212,19 +224,24 @@ The consumer:
 5. finishes all use of the view;
 6. release-stores `read_position + 1`.
 
-The acquire-load of `write_position` makes the producer's slot writes visible. The release-store to `read_position` informs the producer that the slot may be reused.
+The acquire-load of `write_position` makes the producer's slot writes visible. The release-store to `read_position`
+informs the producer that the slot may be reused.
 
-A view remains valid until its slot is released. A consumer API must not advance `read_position` before its caller has finished reading or encoding the payload. This can be expressed with an explicit lease/release API or equivalent ownership.
+A view remains valid until its slot is released. A consumer API must not advance `read_position` before its caller has
+finished reading or encoding the payload. This can be expressed with an explicit lease/release API or equivalent
+ownership.
 
 ## Lifecycle and ownership
 
 - The creator owns sizing, initialization, transition to `READY`, transition to `CLOSED`, and `shm_unlink`.
-- Attachers validate object size, magic, version, header size, reserved fields, capacity, stride, state, and lock-free atomic requirements.
+- Attachers validate object size, magic, version, header size, reserved fields, capacity, stride, state, and lock-free
+  atomic requirements.
 - Attachers close and unmap their own handles but do not unlink an object they do not own.
 - A stale or incompatible object is rejected. An attacher never silently reinitializes it.
 - Creation and attachment may use system calls and allocation; event publication and consumption may not.
 
-Each segment is SPSC. Fan-out uses a separate egress SPSC segment for each local consumer rather than sharing one read cursor among multiple consumers.
+Each segment is SPSC. Fan-out uses a separate egress SPSC segment for each local consumer rather than sharing one read
+cursor among multiple consumers.
 
 ## Shared-memory constants
 
