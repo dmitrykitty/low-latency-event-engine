@@ -35,3 +35,7 @@ target_link_libraries(
 )
 
 gtest_discover_tests(lle-shm-segment-test TEST_PREFIX "lle.shm.segment.")
+
+add_executable(lle-ring-init-test unit/ring_init_test.cpp)
+target_link_libraries(lle-ring-init-test PRIVATE lle::lle lle_project_warnings GTest::gtest_main)
+gtest_discover_tests(lle-ring-init-test TEST_PREFIX "lle.shm.ring.")
