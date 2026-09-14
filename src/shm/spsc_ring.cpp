@@ -1,5 +1,6 @@
 #include "shm/spsc_ring.hpp"
 
+#include <algorithm>
 #include <limits>
 #include <memory>
 #include <utility>
@@ -39,6 +40,31 @@ void fill_preamble(
         std::memory_order_relaxed
     );
 }
+
+bool invalid_memory(std::span<std::byte> memory) {
+    // according my ABI exact size required
+    return memory.data() == nullptr || memory.size() < sizeof(RingHeader) ||
+           reinterpret_cast<std::uintptr_t>(memory.data()) % alignof(RingHeader) != 0;
+}
+
+bool invalid_layout(const RingPreamble& preamble) {
+    return preamble.magic != ring_magic || preamble.layout_version != ring_layout_version ||
+           preamble.header_bytes != ring_header_bytes || preamble.instance_id == 0 ||
+           preamble.reserved != 0;
+}
+
+std::expected<void, RingError> validate_state(const std::uint32_t state) {
+    if (state == static_cast<std::uint32_t>(RingState::Uninitialized) ||
+        state == static_cast<std::uint32_t>(RingState::Initializing)) {
+        return std::unexpected(RingError::NotReady);
+    }
+    if (state != static_cast<std::uint32_t>(RingState::Ready) &&
+        state != static_cast<std::uint32_t>(RingState::Closed)) {
+        return std::unexpected(RingError::InvalidLayout);
+    }
+    return {};
+}
+
 } // namespace
 
 std::expected<std::size_t, RingError>
@@ -82,31 +108,72 @@ std::expected<SpscRing, RingError> SpscRing::initialize(
     }
 
     const std::size_t size = *maybe_size;
-    // according my ABI exact size required
-    if (size != memory.size() || memory.data() == nullptr ||
-        reinterpret_cast<std::uintptr_t>(memory.data()) % alignof(RingHeader) != 0) {
+    if (invalid_memory(memory) || memory.size() != size) {
         return std::unexpected(RingError::InvalidMemory);
     }
 
     // start the lifetimes of the header and its atomic members in fresh storage.
     auto* header = std::construct_at(reinterpret_cast<RingHeader*>(memory.data()));
     fill_preamble(&header->preamble, size, config, instance_id);
-    //because ring is in Initializing state - relaxed is acceptable
+    // because ring is in Initializing state - relaxed is acceptable
     header->producer.position.store(0, std::memory_order_relaxed);
     header->consumer.position.store(0, std::memory_order_relaxed);
 
+    // slots starts at
     auto* slots = memory.data() + ring_header_bytes;
     for (std::size_t index = 0; index < config.slot_count; ++index) {
         auto* slot = slots + index * header->preamble.slot_stride;
         std::construct_at(reinterpret_cast<RingSlotHeader*>(slot));
     }
 
-    // Publish all metadata and initialized slots to an acquire-loading attacher.
+    // publish all metadata and initialized slots to an acquire-loading attacher
     header->preamble.state.store(
         static_cast<std::uint32_t>(RingState::Ready),
         std::memory_order_release
     );
     return SpscRing{header, slots, true};
+}
+
+std::expected<SpscRing, RingError> SpscRing::attach(std::span<std::byte> memory) noexcept {
+    if (invalid_memory(memory)) {
+        return std::unexpected(RingError::InvalidMemory);
+    }
+
+    // the creator must have constructed the header before attachment is attempted
+    auto* header = reinterpret_cast<RingHeader*>(memory.data());
+    const RingPreamble& preamble = header->preamble;
+
+    // pairs with initialization's release-store so metadata is visible here.
+    const auto state = preamble.state.load(std::memory_order_acquire);
+    if (auto state_result = validate_state(state); !state_result) {
+        return std::unexpected(state_result.error());
+    }
+
+    if (invalid_layout(preamble)) {
+        return std::unexpected(RingError::InvalidLayout);
+    }
+    const auto is_zero = [](std::byte value) { return value == std::byte{0}; };
+    if (!std::ranges::all_of(preamble.reserved_bytes, is_zero) ||
+        !std::ranges::all_of(header->producer.reserved_bytes, is_zero) ||
+        !std::ranges::all_of(header->consumer.reserved_bytes, is_zero)) {
+        return std::unexpected(RingError::InvalidLayout);
+    }
+
+    const RingConfig config{preamble.slot_count, preamble.slot_payload_capacity};
+    const auto size = required_bytes(config);
+    if (!size) {
+        return std::unexpected(RingError::InvalidLayout);
+    }
+    const auto stride = (*size - ring_header_bytes) / config.slot_count;
+    if (preamble.slot_stride != stride || preamble.segment_bytes != *size) {
+        return std::unexpected(RingError::InvalidLayout);
+    }
+    if (memory.size() != *size) {
+        return std::unexpected(RingError::InvalidMemory);
+    }
+
+    // the producer may already be running - no cursors resets needed
+    return SpscRing{header, memory.data() + ring_header_bytes, false};
 }
 
 SpscRing::SpscRing(SpscRing&& other) noexcept

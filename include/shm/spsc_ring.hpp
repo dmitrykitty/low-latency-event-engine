@@ -45,7 +45,7 @@ class SpscRing {
         std::uint64_t instance_id
     ) noexcept;
 
-    // Open an existing ring after the creator signals initialization is complete.
+    // open an existing ring after the creator signals initialization is complete.
     static std::expected<SpscRing, RingError>
     attach(std::span<std::byte> memory) noexcept;
 

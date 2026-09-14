@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstring>
 #include <limits>
 #include <memory>
 
@@ -110,6 +111,80 @@ TEST(RingSizeTest, AllowsMetadataOnlySlots) {
     auto result = SpscRing::required_bytes(RingConfig{2, 0});
     ASSERT_TRUE(result.has_value());
     EXPECT_EQ(*result, 192U + 2U * 64U);
+}
+
+class RingAttachTest : public RingInitTest {
+  protected:
+    RingHeader* header{nullptr};
+
+    void SetUp() override {
+        RingInitTest::SetUp();
+        ASSERT_TRUE(SpscRing::initialize(memory(), config, 42).has_value());
+        header = std::launder(reinterpret_cast<RingHeader*>(storage.data()));
+    }
+};
+
+TEST_F(RingAttachTest, PreservesExistingContentsForReadyAndClosedRings) {
+    header->producer.position.store(9);
+    header->consumer.position.store(7);
+    for (auto state : {RingState::Ready, RingState::Closed}) {
+        header->preamble.state.store(static_cast<std::uint32_t>(state));
+        std::array<std::byte, segment_size> before;
+        std::memcpy(before.data(), storage.data(), segment_size);
+        ASSERT_TRUE(SpscRing::attach(memory()).has_value());
+        EXPECT_EQ(std::memcmp(before.data(), storage.data(), segment_size), 0);
+    }
+}
+
+TEST_F(RingAttachTest, RejectsShortMisalignedAndWrongSizeMappings) {
+    for (auto bytes : {std::span<std::byte>{}, memory().first(191),
+                       std::span<std::byte>{storage.data() + 1, segment_size},
+                       memory().first(segment_size - 1),
+                       std::span<std::byte>{storage.data(), segment_size + 1}}) {
+        auto result = SpscRing::attach(bytes);
+        ASSERT_FALSE(result.has_value());
+        EXPECT_EQ(result.error(), RingError::InvalidMemory);
+    }
+}
+
+TEST_F(RingAttachTest, RejectsNotReadyAndUnknownStates) {
+    for (auto state : {RingState::Uninitialized, RingState::Initializing}) {
+        header->preamble.state.store(static_cast<std::uint32_t>(state));
+        auto result = SpscRing::attach(memory());
+        ASSERT_FALSE(result.has_value());
+        EXPECT_EQ(result.error(), RingError::NotReady);
+    }
+    header->preamble.state.store(99);
+    auto result = SpscRing::attach(memory());
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(result.error(), RingError::InvalidLayout);
+}
+
+TEST_F(RingAttachTest, RejectsInvalidMetadata) {
+    auto check_field = [this](auto& field, auto invalid) {
+        const auto original = field;
+        field = invalid;
+        auto result = SpscRing::attach(memory());
+        EXPECT_FALSE(result.has_value());
+        if (!result) {
+            EXPECT_EQ(result.error(), RingError::InvalidLayout);
+        }
+        field = original;
+    };
+    auto& p = header->preamble;
+    check_field(p.magic[0], 'X');
+    check_field(p.layout_version, std::uint16_t{2});
+    check_field(p.header_bytes, std::uint16_t{64});
+    check_field(p.instance_id, std::uint64_t{0});
+    check_field(p.segment_bytes, std::uint64_t{0});
+    check_field(p.slot_count, std::uint32_t{0});
+    check_field(p.slot_count, std::uint32_t{3});
+    check_field(p.slot_stride, std::uint32_t{64});
+    check_field(p.slot_payload_capacity, std::numeric_limits<std::uint32_t>::max());
+    check_field(p.reserved, std::uint32_t{1});
+    check_field(p.reserved_bytes[0], std::byte{1});
+    check_field(header->producer.reserved_bytes[0], std::byte{1});
+    check_field(header->consumer.reserved_bytes[0], std::byte{1});
 }
 
 } // namespace
