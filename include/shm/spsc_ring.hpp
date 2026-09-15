@@ -15,7 +15,7 @@ struct RingConfig {
     std::uint32_t slot_payload_capacity;
 };
 
-enum class RingError: uint8_t {
+enum class RingError : std::uint8_t {
     InvalidConfig,
     SizeOverflow,
     InvalidMemory,
@@ -23,7 +23,7 @@ enum class RingError: uint8_t {
     NotReady
 };
 
-enum class AcquireError: uint8_t {
+enum class AcquireError : std::uint8_t {
     Empty,
     Closed, // Closed and no events remain.
     AlreadyAcquired,
