@@ -2,6 +2,10 @@
 
 Status: shared-memory ABI version 1.
 
+Implementation status: initialization, attachment, publication, acquisition,
+release, and publication closure are implemented. See [testing instructions](testing.md) for commands
+and verification results.
+
 This document specifies LLE's local POSIX shared-memory SPSC queue. It is independent from the Low-Latency Event
 Protocol defined in `docs/protocol.md`; LLEP packet headers, message types, packet sequences, NACKs, and network session
 IDs are not stored in shared-memory event slots.
@@ -95,6 +99,11 @@ actual mapped-object size.
 
 The creator is the only initializer. It initializes metadata, cursors, and slots before release-storing `READY`.
 Attachers acquire-load `state` and validate metadata after observing `READY`.
+
+Startup coordination must establish that initialization has completed before attachment. Reading
+`state` is not a substitute for this coordination: its atomic object must already have been constructed.
+Attachment also accepts `CLOSED` so queued events can be drained. The owner must stop or synchronize
+with the producer before publishing `CLOSED`; closure does not interrupt an in-progress publication.
 
 `INITIALIZING` is reported as not ready. It is never treated as an empty valid queue. The owner release-stores `CLOSED`;
 the consumer acquire-loads it when deciding whether an empty queue can receive more events.
@@ -217,6 +226,10 @@ publication API.
 
 The consumer:
 
+Before loading the cursors, the implementation acquire-loads the segment state. Observing `CLOSED`
+therefore orders the subsequent write-cursor load after the final publication. If the cursor comparison
+shows empty, return `Closed` when that state was observed, otherwise return `Empty` and allow retry.
+
 1. relaxed-loads its locally owned `read_position`;
 2. acquire-loads `write_position`;
 3. reports empty if both positions are equal;
@@ -230,6 +243,10 @@ informs the producer that the slot may be reused.
 A view remains valid until its slot is released. A consumer API must not advance `read_position` before its caller has
 finished reading or encoding the payload. This can be expressed with an explicit lease/release API or equivalent
 ownership.
+
+The implemented API uses explicit `try_acquire()` and `release()`. Only one view may be held per
+consumer handle. `release()` invalidates that view and all copies of its payload span. Destroying the
+handle does not release a held slot. The mapping must outlive all ring handles and outstanding views.
 
 ## Lifecycle and ownership
 
