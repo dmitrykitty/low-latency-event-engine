@@ -90,7 +90,7 @@ TEST_F(RingTransferTest, AllowsEmptyPayload) {
 }
 
 TEST_F(RingTransferTest, MapsLogicalPositionToWrappedSlot) {
-    // seed an empty ring past its first physical wrap; release is not implemented yet.
+    // seed an empty ring past its first physical wrap.
     header->producer.position.store(3);
     header->consumer.position.store(3);
     ASSERT_EQ(producer->try_publish(event()), PublishResult::Ok);
@@ -153,6 +153,100 @@ TEST_F(RingTransferTest, MovedFromHandlesAreClosed) {
     EXPECT_EQ(result.error(), AcquireError::Closed);
     ASSERT_EQ(moved_producer.try_publish(event()), PublishResult::Ok);
     EXPECT_TRUE(moved_consumer.try_acquire().has_value());
+}
+
+TEST_F(RingTransferTest, ReleaseRequiresAcquisitionAndAllowsSlotReuse) {
+    EXPECT_FALSE(consumer->release());
+    ASSERT_EQ(producer->try_publish(event()), PublishResult::Ok);
+    ASSERT_EQ(producer->try_publish(event()), PublishResult::Ok);
+    ASSERT_TRUE(consumer->try_acquire().has_value());
+    ASSERT_TRUE(consumer->release());
+    EXPECT_FALSE(consumer->release());
+    EXPECT_EQ(header->consumer.position.load(), 1U);
+    EXPECT_EQ(producer->try_publish(event()), PublishResult::Ok);
+}
+
+TEST_F(RingTransferTest, EveryPayloadLengthFitsAndCanBeReleased) {
+    for (std::size_t size = 0; size <= payload.size(); ++size) {
+        auto value = event();
+        value.payload = std::span{payload}.first(size);
+        ASSERT_EQ(producer->try_publish(value), PublishResult::Ok);
+        auto received = consumer->try_acquire();
+        ASSERT_TRUE(received.has_value());
+        ASSERT_EQ(received->payload.size(), size);
+        for (std::size_t i = 0; i < size; ++i) {
+            EXPECT_EQ(received->payload[i], payload[i]);
+        }
+        ASSERT_TRUE(consumer->release());
+    }
+}
+
+TEST_F(RingTransferTest, CloseEmptyRingReportsClosed) {
+    ASSERT_TRUE(producer->close_publication());
+    auto result = consumer->try_acquire();
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(result.error(), AcquireError::Closed);
+    EXPECT_FALSE(consumer->release());
+}
+
+TEST_F(RingTransferTest, RepeatedWrapsPreserveFifoOrder) {
+    for (std::uint64_t batch = 0; batch < 1000; ++batch) {
+        for (std::uint64_t i = 0; i < 2; ++i) {
+            auto value = event();
+            value.sequence = batch * 2 + i;
+            ASSERT_EQ(producer->try_publish(value), PublishResult::Ok);
+        }
+        EXPECT_EQ(producer->try_publish(event()), PublishResult::Full);
+        for (std::uint64_t i = 0; i < 2; ++i) {
+            auto value = consumer->try_acquire();
+            ASSERT_TRUE(value.has_value());
+            EXPECT_EQ(value->sequence, batch * 2 + i);
+            ASSERT_TRUE(consumer->release());
+        }
+    }
+}
+
+TEST_F(RingTransferTest, OnlyInitializerCanCloseAndQueuedEventsDrain) {
+    EXPECT_FALSE(consumer->close_publication());
+    ASSERT_EQ(producer->try_publish(event()), PublishResult::Ok);
+    ASSERT_EQ(producer->try_publish(event()), PublishResult::Ok);
+    ASSERT_TRUE(producer->close_publication());
+    EXPECT_TRUE(producer->close_publication());
+    EXPECT_EQ(producer->try_publish(event()), PublishResult::Closed);
+    for (int i = 0; i < 2; ++i) {
+        ASSERT_TRUE(consumer->try_acquire().has_value());
+        ASSERT_TRUE(consumer->release());
+    }
+    auto result = consumer->try_acquire();
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(result.error(), AcquireError::Closed);
+}
+
+TEST_F(RingTransferTest, MoveTransfersHeldSlotAndCloseAuthority) {
+    ASSERT_EQ(producer->try_publish(event()), PublishResult::Ok);
+    ASSERT_TRUE(consumer->try_acquire().has_value());
+    auto moved_consumer = std::move(*consumer);
+    EXPECT_FALSE(consumer->release());
+    EXPECT_TRUE(moved_consumer.release());
+    EXPECT_EQ(header->consumer.position.load(), 1U);
+    auto moved_producer = std::move(*producer);
+    EXPECT_FALSE(producer->close_publication());
+    EXPECT_TRUE(moved_producer.close_publication());
+}
+
+TEST_F(RingTransferTest, FinalCursorValueCanBeConsumedWithoutWrapping) {
+    const auto max = std::numeric_limits<std::uint64_t>::max();
+    header->producer.position.store(max - 1);
+    header->consumer.position.store(max - 1);
+    ASSERT_EQ(producer->try_publish(event()), PublishResult::Ok);
+    ASSERT_TRUE(consumer->try_acquire().has_value());
+    ASSERT_TRUE(consumer->release());
+    EXPECT_EQ(header->consumer.position.load(), max);
+    EXPECT_EQ(producer->try_publish(event()), PublishResult::Closed);
+    ASSERT_TRUE(producer->close_publication());
+    auto result = consumer->try_acquire();
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(result.error(), AcquireError::Closed);
 }
 
 } // namespace

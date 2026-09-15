@@ -282,6 +282,7 @@ bool SpscRing::release() noexcept {
     if (!acquired_) {
         return false;
     }
+    // finish all slot reads before allowing the producer to reuse its storage.
     header_->consumer.position.store(acquired_position_ + 1, std::memory_order::release);
     acquired_ = false;
     acquired_position_ = 0;
@@ -294,6 +295,7 @@ bool SpscRing::close_publication() noexcept {
         return false;
     }
 
+    // the caller has stopped the producer; publish closure after its final event.
     header_->preamble.state.store(
         static_cast<std::uint32_t>(RingState::Closed),
         std::memory_order::release

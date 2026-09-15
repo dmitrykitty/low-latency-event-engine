@@ -1,3 +1,14 @@
+if(LLE_ENABLE_TSAN AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_program(LLE_SETARCH_EXECUTABLE setarch REQUIRED)
+    # disable address randomization only in test processes so tsan can reserve its shadow memory.
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.29")
+        set(CMAKE_TEST_LAUNCHER "${LLE_SETARCH_EXECUTABLE};${CMAKE_SYSTEM_PROCESSOR};-R")
+    else()
+        # older cmake uses this property for native google test discovery and execution too.
+        set(CMAKE_CROSSCOMPILING_EMULATOR "${LLE_SETARCH_EXECUTABLE};${CMAKE_SYSTEM_PROCESSOR};-R")
+    endif()
+endif()
+
 find_package(GTest CONFIG QUIET)
 
 if(NOT GTest_FOUND)
@@ -43,3 +54,8 @@ gtest_discover_tests(lle-ring-init-test TEST_PREFIX "lle.shm.ring.")
 add_executable(lle-ring-transfer-test unit/ring_transfer_test.cpp)
 target_link_libraries(lle-ring-transfer-test PRIVATE lle::lle lle_project_warnings GTest::gtest_main)
 gtest_discover_tests(lle-ring-transfer-test TEST_PREFIX "lle.shm.transfer.")
+
+find_package(Threads REQUIRED)
+add_executable(lle-ring-concurrency-test integration/ring_concurrency_test.cpp)
+target_link_libraries(lle-ring-concurrency-test PRIVATE lle::lle lle_project_warnings GTest::gtest_main Threads::Threads)
+gtest_discover_tests(lle-ring-concurrency-test TEST_PREFIX "lle.shm.concurrent." PROPERTIES TIMEOUT 60)
