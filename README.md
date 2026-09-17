@@ -19,6 +19,9 @@ TSan launcher required when running directly from CLion.
 
 ## Implementation phase I
 
+For the optional Google Benchmark comparison of LLE, Boost, and rigtorp queues,
+see [SPSC benchmark instructions](docs/spsc-benchmarks.md).
+
 Implemented:
 
 - POSIX shared-memory creation, attachment, mapping, close, and owner-controlled unlink.
@@ -57,4 +60,3 @@ challenge-specific integration belongs under **adapters/**.
 - **lle-ring-init-test**: ring layout, initialization, and attachment tests;
 - **lle-ring-transfer-test**: publication, acquisition, release, closure, and boundary tests;
 - **lle-ring-concurrency-test**: thread and process integration tests.
-

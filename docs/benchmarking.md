@@ -1,5 +1,10 @@
 # Benchmark methodology
 
+See [SPSC queue benchmarks](spsc-benchmarks.md) for the implemented Google Benchmark
+comparison of LLE, Boost, and rigtorp, including build/run commands and output interpretation.
+That microbenchmark uses saturated throughput and closed-loop RTT; the open-loop
+system methodology below is a separate, future end-to-end workload.
+
 System benchmarks use planned/open-loop arrivals, warm-up, preallocated and pre-touched sample storage, no disk or console I/O in timed loops, and environment manifests. Aggregate percentiles are calculated from pooled observations while preserving run-to-run variability.
 
 Published p99.9 needs at least 100,000 observations and p99.99 at least 1,000,000. Important A/B comparisons use interleaved blocks and change one variable.
