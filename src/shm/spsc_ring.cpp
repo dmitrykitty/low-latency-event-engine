@@ -79,6 +79,7 @@ std::expected<void, RingError> validate_state(const std::uint32_t state) {
 
 } // namespace
 
+//returns size like slot_amount * slot_size + rin_header_size
 std::expected<std::size_t, RingError>
 SpscRing::required_bytes(const RingConfig& config) noexcept {
     const auto slot_count = config.slot_count;

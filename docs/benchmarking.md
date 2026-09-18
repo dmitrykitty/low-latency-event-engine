@@ -2,7 +2,7 @@
 
 See [SPSC queue benchmarks](spsc-benchmarks.md) for the implemented Google Benchmark
 comparison of LLE, Boost, and rigtorp, including build/run commands and output interpretation.
-That microbenchmark uses saturated throughput and closed-loop RTT; the open-loop
+That microbenchmark currently measures throughput only; the open-loop
 system methodology below is a separate, future end-to-end workload.
 
 System benchmarks use planned/open-loop arrivals, warm-up, preallocated and pre-touched sample storage, no disk or console I/O in timed loops, and environment manifests. Aggregate percentiles are calculated from pooled observations while preserving run-to-run variability.

@@ -1,0 +1,277 @@
+#include "shm/spsc_ring.hpp"
+#include <benchmark/benchmark.h>
+#include <boost/lockfree/spsc_queue.hpp>
+#include <rigtorp/SPSCQueue.h>
+
+#include <algorithm>
+#include <array>
+#include <atomic>
+#include <cmath>
+#include <immintrin.h>
+#include <memory>
+#include <new>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <thread>
+
+namespace lle {
+struct EventView;
+}
+
+namespace benchmark {
+class State;
+}
+
+namespace {
+// data to be sent
+template <std::size_t N>
+struct Record {
+    std::uint64_t sequence;
+    std::uint64_t timestamp;
+    std::uint32_t stream;
+    std::uint32_t length;
+    std::array<std::byte, N> payload;
+};
+
+template <std::size_t N>
+class LLEQueue {
+    struct Deleter {
+        void operator()(std::byte* ptr) const {
+            operator delete(ptr, std::align_val_t{64});
+        }
+    };
+
+public:
+    explicit LLEQueue(std::size_t capacity) {
+        lle::shm::RingConfig config{
+            .slot_count = static_cast<std::uint32_t>(capacity),
+            .slot_payload_capacity = static_cast<std::uint32_t>(N)
+        };
+
+        const auto size = lle::shm::SpscRing::required_bytes(config);
+        if (!size) {
+            throw std::runtime_error("invalid configuration");
+        }
+        storage_.reset(static_cast<std::byte*>(operator new(*size, std::align_val_t{64})));
+        auto producer = lle::shm::SpscRing::initialize({storage_.get(), *size}, config, 42);
+        if (!producer) {
+            throw std::runtime_error("cannot initialize ring");
+        }
+        producer_.emplace(std::move(*producer));
+
+        auto consumer = lle::shm::SpscRing::attach({storage_.get(), *size});
+        if (!consumer) {
+            throw std::runtime_error("cannot attach ring");
+        }
+        consumer_.emplace(std::move(*consumer));
+    }
+
+    bool try_push(const Record<N>& r) {
+        const lle::EventView event{
+            .stream_id = r.stream,
+            .sequence = r.sequence,
+            .source_timestamp_ns = r.timestamp,
+            .payload = r.payload
+        };
+        return producer_->try_publish(event) == lle::PublishResult::Ok;
+    }
+
+    template <class F>
+    bool try_consume(F&& f) {
+        auto result = consumer_->try_acquire();
+        if (!result) {
+            return false;
+        }
+        f(*result);
+        return consumer_->release();
+    }
+
+private:
+    std::unique_ptr<std::byte, Deleter> storage_;
+    std::optional<lle::shm::SpscRing> producer_;
+    std::optional<lle::shm::SpscRing> consumer_;
+};
+
+template <std::size_t N>
+class RigtorpQueue {
+public:
+    explicit RigtorpQueue(std::size_t capacity)
+        : queue_(capacity) {}
+
+    bool try_push(const Record<N>& r) {
+        return queue_.try_push(r);
+    }
+
+    template <class F> bool try_consume(F&& f) {
+        Record<N>* r = queue_.front();
+        if (r == nullptr) {
+            return false;
+        }
+        lle::EventView event{
+            .stream_id = r->stream,
+            .sequence = r->sequence,
+            .source_timestamp_ns = r->timestamp,
+            .payload = r->payload
+        };
+
+        f(event);
+        queue_.pop();
+        return true;
+    }
+
+private:
+    rigtorp::SPSCQueue<Record<N>> queue_;
+};
+
+template <std::size_t N>
+class BoostQueue {
+public:
+    explicit BoostQueue(std::size_t capacity)
+        : queue_(capacity) {}
+    bool try_push(const Record<N>& r) {
+        return queue_.push(r);
+    }
+    template <class F>
+    bool try_consume(F&& f) {
+        return queue_.consume_one([&](const Record<N>& r) {
+            lle::EventView event{
+                .stream_id = r.stream,
+                .sequence = r.sequence,
+                .source_timestamp_ns = r.timestamp,
+                .payload = r.payload
+            };
+            f(event);
+        });
+    }
+
+private:
+    boost::lockfree::spsc_queue<Record<N>> queue_;
+};
+
+template <template <std::size_t> class Queue, std::size_t N>
+void run_throughput(benchmark::State& state) {
+    constexpr std::uint64_t event_count = 1'000'000;
+
+    //slots amount
+    const auto capacity = static_cast<std::size_t>(state.range(0));
+    Queue<N> queue{capacity};
+    Record<N> record{};
+
+    record.stream = 9;
+    record.length = static_cast<std::uint32_t>(N);
+    record.payload.fill(std::byte{0x5a});
+
+    //start benchmark
+    for (auto _ : state) {
+        state.PauseTiming();
+
+        bool correct = true;
+        std::atomic consumer_ready{false};
+        std::atomic start{false};
+
+        //we don't want to calculate consumer create time
+        state.PauseTiming();
+
+        //not like in java. new tread start to work from constructor time
+        //new os tread created and lambda is performed
+        std::jthread consumer([&] {
+
+            //kind of handshake: consumer -> ready to consume, wait for producer
+            consumer_ready.store(true, std::memory_order_release);
+
+            //wait for producer: producer -> start
+            while (!start.load(std::memory_order_acquire)) {
+                _mm_pause();
+            }
+
+            for (std::uint64_t expected = 0; expected < event_count; ++expected) {
+                //if empty - try_consume -> false , wait for event in ring
+                //spin waiting for producer put event into buffer
+                while (!queue.try_consume(
+                        [&](const lle::EventView& event) {
+                            if (event.sequence != expected) {
+                                correct = false;
+                            }
+                        }
+                    ))
+                {
+                    _mm_pause();
+                }
+            }
+        });
+
+        //waiting for consumer -> ready to consume
+        while (!consumer_ready.load(std::memory_order_acquire)) {
+            _mm_pause();
+        }
+
+        state.ResumeTiming();
+        start.store(true, std::memory_order_release);
+
+        for (std::uint64_t i = 0; i < event_count; ++i) {
+            record.sequence = i;
+            record.timestamp = i * 3;
+
+            //spin waiting until consumer free buffer
+            while (!queue.try_push(record)) {
+                _mm_pause();
+            }
+        }
+
+        //waiting for consumer
+        consumer.join();
+        state.PauseTiming();
+
+        if (!correct) {
+            state.SkipWithError("consumer received invalid sequence");
+            break;
+        }
+
+        state.ResumeTiming();
+    }
+    state.SetItemsProcessed(state.iterations() * static_cast<int64_t>(event_count));
+}
+
+template <std::size_t N>
+void BM_LLE(benchmark::State& state) {
+    run_throughput<LLEQueue, N>(state);
+}
+
+template <std::size_t N>
+void BM_Rigtorp(benchmark::State& state) {
+    run_throughput<RigtorpQueue, N>(state);
+}
+
+template <std::size_t N>
+void BM_Boost(benchmark::State& state) {
+    run_throughput<BoostQueue, N>(state);
+}
+
+void add_capacity_size(benchmark::internal::Benchmark* registration) {
+    registration->Arg(64);
+    registration->Arg(1024);
+    registration->Arg(16384);
+    registration->UseRealTime();
+
+}
+
+BENCHMARK_TEMPLATE(BM_LLE, 16)->Apply(add_capacity_size);
+BENCHMARK_TEMPLATE(BM_LLE, 64)->Apply(add_capacity_size);
+BENCHMARK_TEMPLATE(BM_LLE, 256)->Apply(add_capacity_size);
+BENCHMARK_TEMPLATE(BM_LLE, 1024)->Apply(add_capacity_size);
+
+BENCHMARK_TEMPLATE(BM_Rigtorp, 16)->Apply(add_capacity_size);
+BENCHMARK_TEMPLATE(BM_Rigtorp, 64)->Apply(add_capacity_size);
+BENCHMARK_TEMPLATE(BM_Rigtorp, 256)->Apply(add_capacity_size);
+BENCHMARK_TEMPLATE(BM_Rigtorp, 1024)->Apply(add_capacity_size);
+
+BENCHMARK_TEMPLATE(BM_Boost, 16)->Apply(add_capacity_size);
+BENCHMARK_TEMPLATE(BM_Boost, 64)->Apply(add_capacity_size);
+BENCHMARK_TEMPLATE(BM_Boost, 256)->Apply(add_capacity_size);
+BENCHMARK_TEMPLATE(BM_Boost, 1024)->Apply(add_capacity_size);
+
+
+} // namespace
+
+BENCHMARK_MAIN();
