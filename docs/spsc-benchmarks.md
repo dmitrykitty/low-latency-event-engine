@@ -1,4 +1,4 @@
-# SPSC throughput benchmark
+# SPSC throughput and RTT benchmarks
 
 ## What your benchmark does
 
@@ -7,8 +7,9 @@ The executable compares LLE `SpscRing`, rigtorp `SPSCQueue`, and Boost
 reads them. They share ordinary process memory: this is not a cross-process SHM
 or UDP benchmark.
 
-Each Google Benchmark iteration transfers **1,000,000 events with 64-byte payloads**.
-Each queue runs at 64, 1024, and 16384 slots: nine cases in total.
+Each throughput iteration transfers **1,000,000 events**. Payload sizes are
+16, 64, 256, and 1024 bytes. Each queue runs at 64, 1024, and 16384 slots:
+36 throughput cases. Another 12 cases measure RTT at fixed capacity 1024.
 The consumer checks event sequence order. Full/empty queues are retried using
 `_mm_pause()`; this is busy-waiting, not sleeping.
 
@@ -19,16 +20,36 @@ The code is organized as follows:
   `try_consume` interface. Consumption inspects the queued event in place.
 - `run_throughput` creates the queue, starts the consumer, waits for its readiness,
   transfers the events, joins the consumer, and reports the event count.
-- `BM_LLE_64`, `BM_Rigtorp_64`, and `BM_Boost_64` select the queue implementation.
+- `BM_LLE<N>`, `BM_Rigtorp<N>`, and `BM_Boost<N>` select throughput implementations.
+- `BM_LLE_RTT<N>`, `BM_Rigtorp_RTT<N>`, and `BM_Boost_RTT<N>` select RTT implementations.
+- `BENCHMARK_TEMPLATE` instantiates each function for a compile-time payload size.
+- `configure_rtt` selects real time and one iteration per repetition so percentile
+  counters represent the complete measured batch, not only the last iteration.
 - `add_capacity_size` registers capacities and selects wall-clock timing.
 - `BENCHMARK_MAIN()` supplies the command-line entry point.
 
-Queue allocation is outside the benchmark loop. Timing is paused for consumer
+For throughput, queue allocation is outside the benchmark loop. Timing is paused for consumer
 creation and the readiness handshake. The timed section includes signaling start,
 updating event metadata, pushing, consuming, sequence validation, and joining the
 consumer. Consequently this measures the complete transfer workload, not an
 isolated push instruction. Google Benchmark chooses how many million-event batches
 to run to meet its requested measurement duration.
+
+### RTT workload
+
+`run_rtt` uses a request queue and a response queue, both with 1024 slots. Only one
+request is outstanding: send request, consume it on the other thread, prepare and
+publish a response, consume that response on the first thread, then repeat.
+The response has the same payload size and prefilled bytes, but is not a copy of
+the received event. Sequence numbers are checked in both directions.
+
+Each repetition first performs 10,000 unmeasured warm-up exchanges and then
+records 100,000 RTT samples with `steady_clock`. Each sample starts immediately
+before request publication and ends after response consumption/release. It includes
+spinning, both queue transfers, response sequence preparation, validation, and
+clock overhead. It is not one-way latency or latency under a saturated offered load.
+Allocation, thread creation, warm-up, joining, and percentile sorting are outside
+the timed RTT batch. Batch time additionally includes sample storage and loop work.
 
 ## Build
 
@@ -64,22 +85,23 @@ List cases first:
 ./build/bench/benchmarks/lle-spsc-benchmark --benchmark_list_tests=true
 ```
 
-Run all three queues at 1024 slots:
+Run throughput for all three queues at 64-byte payload and 1024 slots:
 
 ```sh
 timeout 180s ./build/bench/benchmarks/lle-spsc-benchmark \
-  --benchmark_filter='^BM_(LLE|Rigtorp|Boost)_64/1024/' \
+  --benchmark_filter='^BM_(LLE|Rigtorp|Boost)<64>/1024/' \
   --benchmark_min_time=1s \
   --benchmark_repetitions=3 \
   --benchmark_enable_random_interleaving=true
 ```
 
-Run only LLE at that capacity with `--benchmark_filter='^BM_LLE_64/1024/'`.
-Run the complete nine-case comparison and save JSON:
+Run only LLE at that size/capacity with `--benchmark_filter='^BM_LLE<64>/1024/'`.
+Run all 36 throughput cases and save JSON:
 
 ```sh
 mkdir -p results
 timeout 600s ./build/bench/benchmarks/lle-spsc-benchmark \
+  --benchmark_filter='^BM_(LLE|Rigtorp|Boost)<' \
   --benchmark_min_time=1s \
   --benchmark_repetitions=5 \
   --benchmark_enable_random_interleaving=true \
@@ -88,20 +110,37 @@ timeout 600s ./build/bench/benchmarks/lle-spsc-benchmark \
 ```
 
 `--benchmark_min_time=1s` asks the framework to calibrate enough batches for about
-one second of measured work per repetition. It is not the runtime of the whole
+one second of measured throughput work per repetition. It is not the runtime of the whole
 command. Repetitions show variation; random interleaving reduces ordering bias.
 `timeout` prevents an indefinite hang if a transfer stops making progress; increase
 it on slower systems. Incomplete or error-marked runs are not usable measurements.
 
 **The previous `lle/throughput/...` filters and `LLE_BENCH_*_CPU` environment
 variables no longer apply.** Your simplified executable does not read those
-variables. The registered names now look like `BM_LLE_64/1024/real_time`.
+variables. Names now look like `BM_LLE<64>/1024/real_time`.
+
+Run all 12 RTT cases:
+
+```sh
+mkdir -p results
+timeout 180s ./build/bench/benchmarks/lle-spsc-benchmark \
+  --benchmark_filter='_RTT<' \
+  --benchmark_repetitions=5 \
+  --benchmark_enable_random_interleaving=true \
+  --benchmark_out=results/spsc-rtt.json --benchmark_out_format=json
+```
+
+Use `--benchmark_filter='_RTT<64>'` for all queues with a 64-byte payload or
+`--benchmark_filter='^BM_LLE_RTT<'` for LLE at all four sizes. RTT has one fixed
+100,000-sample iteration per repetition, so `--benchmark_min_time` does not extend
+it. Do not override its iteration count: counters would describe only the last
+iteration. Omitting the filter runs all 48 throughput and RTT cases.
 
 ## Read the output
 
-- `items_per_second` is completed events per second. `15M/s` means 15 million
-  events/s. Compare the same capacity; higher is better.
-- `Time` is average wall time for **one million-event batch**, not one event.
+- Throughput `items_per_second` is completed events per second. `15M/s` means 15
+  million events/s. RTT counts round trips instead. Compare matching cases.
+- Throughput `Time` is average wall time for **one million-event batch**, not one event.
   For example 50,000,000 ns is 50 ms per batch, or 20M events/s. This is only an
   example, not a measured result.
 - `Iterations` is the number of those batches, not the number of events.
@@ -110,16 +149,21 @@ variables. The registered names now look like `BM_LLE_64/1024/real_time`.
 - `_median`, `_mean`, `_stddev`, and `_cv` summarize repetitions. Look at the
   individual results and spread as well as the median.
 
-This version measures **no RTT or latency percentiles**. Dividing batch time by
-event count gives an amortized time per event, not the latency experienced by an
-individual event. Earlier results from the old harness are not directly comparable:
-the workload and validation have changed.
+RTT `Time` describes the 100,000-exchange measured batch. `p50_ns`, `p90_ns`,
+`p99_ns`, and `p999_ns` describe individual RTT samples in nanoseconds; lower is
+better. For example p99 means at least 99% of samples are no greater than that
+value. `p999_ns` is p99.9, not p99.99. Console counters can use SI suffixes.
+Repetition summaries aggregate per-run percentiles, not pooled raw observations.
+Raw samples are not exported. Dividing throughput batch time by event count is
+not an individual event latency measurement. Older harness results are not directly
+comparable because workload and validation have changed.
 
 ## Current limitations
 
 This is a simpler learning benchmark, not yet a controlled final performance study:
 
-- There is no explicit warm-up or complete payload pre-touch. Framework calibration
+- Throughput has no explicit warm-up or complete payload pre-touch. RTT does have
+  its 10,000-exchange warm-up. Framework calibration
   is not a documented steady-state warm-up phase.
 - Threads are not individually pinned. On native Linux, inspect topology with
   `lscpu -e=CPU,CORE,SOCKET,NODE,ONLINE`. You can optionally prefix a run with
@@ -135,7 +179,7 @@ This is a simpler learning benchmark, not yet a controlled final performance stu
 - Queue contracts and memory footprints differ. In this record layout the baseline
   contains 24 bytes of metadata plus 64 bytes of payload; LLE uses a 128-byte slot
   for the same payload. LLE also performs additional state/layout-related checks.
-- Joining the consumer is included in timing. Thread creation is excluded, but a
+- Joining the consumer is included in throughput timing, but excluded for RTT. Thread creation is excluded, but a
   new consumer is created for each million-event batch.
 
 For final comparisons prefer native Linux, close competing workloads, keep power
@@ -147,7 +191,8 @@ No winner can be inferred from this revised harness until it is measured.
 
 Create a Release CMake profile using `build/bench` and the `-D` options from the
 build command. Reload CMake and select `lle-spsc-benchmark` as the run target.
-Put `--benchmark_filter=^BM_LLE_64/1024/ --benchmark_min_time=1s` in **Program
+Put `--benchmark_filter=^BM_LLE<64>/1024/ --benchmark_min_time=1s` in **Program
 arguments**, not CMake options. No CPU environment variables are required.
 Run without the debugger. For relative JSON paths, set the working directory to
 the repository root and create `results` first.
+For RTT, use `--benchmark_filter=^BM_LLE_RTT< --benchmark_repetitions=5` instead.
