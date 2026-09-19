@@ -1,5 +1,6 @@
 #include "shm/spsc_ring.hpp"
 #include <benchmark/benchmark.h>
+#include <algorithm>
 #include <boost/lockfree/spsc_queue.hpp>
 #include <rigtorp/SPSCQueue.h>
 
@@ -14,6 +15,8 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <chrono>
+#include <vector>
 
 namespace lle {
 struct EventView;
@@ -170,9 +173,6 @@ void run_throughput(benchmark::State& state) {
         std::atomic consumer_ready{false};
         std::atomic start{false};
 
-        //we don't want to calculate consumer create time
-        state.PauseTiming();
-
         //not like in java. new tread start to work from constructor time
         //new os tread created and lambda is performed
         std::jthread consumer([&] {
@@ -232,6 +232,139 @@ void run_throughput(benchmark::State& state) {
     }
     state.SetItemsProcessed(state.iterations() * static_cast<int64_t>(event_count));
 }
+// rtt includes both queues, spinning, response preparation, and sequence checks.
+template <template<std::size_t> class Queue, std::size_t N>
+void run_rtt(benchmark::State& state) {
+    constexpr std::size_t capacity = 1024;
+    constexpr std::uint64_t warmup_count = 10'000;
+    constexpr std::uint64_t sample_count = 100'000;
+    constexpr  std::uint64_t total = warmup_count + sample_count;
+
+    Queue<N> requests{capacity};
+    Queue<N> responses{capacity};
+
+    Record<N> request{};
+    request.stream = 9;
+    request.length = static_cast<std::uint32_t>(N);
+    request.payload.fill(std::byte{0x5a});
+
+    Record<N> response{};
+    response.stream = 9;
+    response.length = static_cast<std::uint32_t>(N);
+    response.payload.fill(std::byte{0x5a});
+
+    std::vector<std::uint64_t> samples(sample_count);
+
+    for (auto _ : state) {
+        //we don't want to calculate consumer create time
+        state.PauseTiming();
+
+        std::atomic correct{true};
+        std::atomic consumer_ready{false};
+        std::atomic start{false};
+
+        std::jthread consumer([&] {
+            consumer_ready.store(true, std::memory_order_release);
+
+            while (!start.load(std::memory_order_acquire)) {
+                _mm_pause();
+            }
+
+            for (std::uint64_t expected = 0; expected < total; ++expected) {
+                //get request
+                while (!requests.try_consume(
+                    [&](const lle::EventView& event) {
+                        if (event.sequence != expected) {
+                            correct.store(false, std::memory_order_relaxed);
+                        }
+                    }))
+                {
+                    _mm_pause();
+                }
+                //send response
+                response.sequence = expected;
+                while (!responses.try_push(response)) {
+                    _mm_pause();
+                }
+            }
+        });
+
+        while (!consumer_ready.load(std::memory_order_acquire)) {
+            _mm_pause();
+        }
+
+        start.store(true, std::memory_order_release);
+
+        //warmup
+
+        for (std::uint64_t i = 0; i < warmup_count; ++i) {
+            request.sequence = i;
+            while (!requests.try_push(request)) {
+                _mm_pause();
+            }
+
+            while (!responses.try_consume(
+                [&](const lle::EventView& event) {
+                    if (event.sequence != i) {
+                        correct.store(false, std::memory_order_relaxed);
+                    }
+                }))
+            {
+                _mm_pause();
+            }
+        }
+
+        state.ResumeTiming();
+        //benchmark measurements stats
+
+        for (std::uint64_t i = 0; i < sample_count; ++i) {
+            request.sequence = i + warmup_count;
+            const auto response_sequence = i + warmup_count;
+
+            const auto begin = std::chrono::steady_clock::now();
+            while (!requests.try_push(request)) {
+                _mm_pause();
+            }
+
+            while (!responses.try_consume(
+                [&](const lle::EventView& event) {
+                    if (event.sequence != response_sequence) {
+                        correct = false;
+                    }
+                }))
+            {
+                _mm_pause();
+            }
+            const auto end = std::chrono::steady_clock::now();
+            samples[i] = static_cast<std::uint64_t>(
+                std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count());
+        }
+
+        state.PauseTiming();
+        consumer.join();
+
+        if (!correct.load(std::memory_order_relaxed)) {
+            state.SkipWithError("received invalid sequence");
+            break;
+        }
+
+        std::ranges::sort(samples);
+
+        auto percentile = [&](const double p) {
+            const auto index = static_cast<std::size_t>(
+                std::ceil(p * static_cast<double>(samples.size()))) - 1;
+            return samples[std::min(index,samples.size() - 1)];
+        };
+
+        state.counters["p50_ns"] = static_cast<double>(percentile(0.50));
+        state.counters["p90_ns"] = static_cast<double>(percentile(0.90));
+        state.counters["p99_ns"] = static_cast<double>(percentile(0.99));
+        state.counters["p999_ns"] = static_cast<double>(percentile(0.999));
+
+        state.ResumeTiming();
+    }
+    state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(sample_count));
+}
 
 template <std::size_t N>
 void BM_LLE(benchmark::State& state) {
@@ -271,6 +404,40 @@ BENCHMARK_TEMPLATE(BM_Boost, 64)->Apply(add_capacity_size);
 BENCHMARK_TEMPLATE(BM_Boost, 256)->Apply(add_capacity_size);
 BENCHMARK_TEMPLATE(BM_Boost, 1024)->Apply(add_capacity_size);
 
+template <std::size_t N>
+void BM_LLE_RTT(benchmark::State& state) {
+    run_rtt<LLEQueue, N>(state);
+}
+
+template <std::size_t N>
+void BM_Rigtorp_RTT(benchmark::State& state) {
+    run_rtt<RigtorpQueue, N>(state);
+}
+
+template <std::size_t N>
+void BM_Boost_RTT(benchmark::State& state) {
+    run_rtt<BoostQueue, N>(state);
+}
+
+// one iteration keeps percentile counters tied to a single 100,000-sample batch.
+void configure_rtt(benchmark::internal::Benchmark* registration) {
+    registration->UseRealTime()->Iterations(1);
+}
+
+BENCHMARK_TEMPLATE(BM_LLE_RTT, 16)->Apply(configure_rtt);
+BENCHMARK_TEMPLATE(BM_LLE_RTT, 64)->Apply(configure_rtt);
+BENCHMARK_TEMPLATE(BM_LLE_RTT, 256)->Apply(configure_rtt);
+BENCHMARK_TEMPLATE(BM_LLE_RTT, 1024)->Apply(configure_rtt);
+
+BENCHMARK_TEMPLATE(BM_Rigtorp_RTT, 16)->Apply(configure_rtt);
+BENCHMARK_TEMPLATE(BM_Rigtorp_RTT, 64)->Apply(configure_rtt);
+BENCHMARK_TEMPLATE(BM_Rigtorp_RTT, 256)->Apply(configure_rtt);
+BENCHMARK_TEMPLATE(BM_Rigtorp_RTT, 1024)->Apply(configure_rtt);
+
+BENCHMARK_TEMPLATE(BM_Boost_RTT, 16)->Apply(configure_rtt);
+BENCHMARK_TEMPLATE(BM_Boost_RTT, 64)->Apply(configure_rtt);
+BENCHMARK_TEMPLATE(BM_Boost_RTT, 256)->Apply(configure_rtt);
+BENCHMARK_TEMPLATE(BM_Boost_RTT, 1024)->Apply(configure_rtt);
 
 } // namespace
 
