@@ -4,7 +4,6 @@
 #include <boost/lockfree/spsc_queue.hpp>
 #include <rigtorp/SPSCQueue.h>
 
-#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -17,6 +16,10 @@
 #include <thread>
 #include <chrono>
 #include <vector>
+#include <sched.h>
+#include <charconv>
+#include <iostream>
+#include <string_view>
 
 namespace lle {
 struct EventView;
@@ -27,6 +30,25 @@ class State;
 }
 
 namespace {
+
+int producer_cpu = -1;
+int consumer_cpu = -1;
+
+void pin_to_cpu(int cpu) {
+    if (cpu < 0 || cpu >= CPU_SETSIZE) {
+        throw std::runtime_error("cpu id outside supported range");
+    }
+    cpu_set_t cpuset;
+    //reset all cpus
+    CPU_ZERO(&cpuset);
+    CPU_SET(static_cast<std::size_t>(cpu), &cpuset);
+
+    //             current_thread pid
+    if (sched_setaffinity(0, sizeof(cpuset), &cpuset) != 0) {
+        throw std::runtime_error("cannot pin to cpu " + std::to_string(cpu));
+    }
+}
+
 // data to be sent
 template <std::size_t N>
 struct Record {
@@ -172,10 +194,17 @@ void run_throughput(benchmark::State& state) {
         bool correct = true;
         std::atomic consumer_ready{false};
         std::atomic start{false};
+        bool pin_ok = true;
 
         //not like in java. new tread start to work from constructor time
         //new os tread created and lambda is performed
         std::jthread consumer([&] {
+            try { pin_to_cpu(consumer_cpu); }
+            catch (const std::exception&) {
+                pin_ok = false;
+                consumer_ready.store(true, std::memory_order_release);
+                return;
+            }
 
             //kind of handshake: consumer -> ready to consume, wait for producer
             consumer_ready.store(true, std::memory_order_release);
@@ -207,6 +236,11 @@ void run_throughput(benchmark::State& state) {
         }
 
         state.ResumeTiming();
+        if (!pin_ok) {
+            consumer.join();
+            state.SkipWithError("cannot pin consumer to requested cpu");
+            break;
+        }
         start.store(true, std::memory_order_release);
 
         for (std::uint64_t i = 0; i < event_count; ++i) {
@@ -262,8 +296,15 @@ void run_rtt(benchmark::State& state) {
         std::atomic correct{true};
         std::atomic consumer_ready{false};
         std::atomic start{false};
+        bool pin_ok = true;
 
         std::jthread consumer([&] {
+            try { pin_to_cpu(consumer_cpu); }
+            catch (const std::exception&) {
+                pin_ok = false;
+                consumer_ready.store(true, std::memory_order_release);
+                return;
+            }
             consumer_ready.store(true, std::memory_order_release);
 
             while (!start.load(std::memory_order_acquire)) {
@@ -293,6 +334,11 @@ void run_rtt(benchmark::State& state) {
             _mm_pause();
         }
 
+        if (!pin_ok) {
+            consumer.join();
+            state.SkipWithError("cannot pin consumer to requested cpu");
+            break;
+        }
         start.store(true, std::memory_order_release);
 
         //warmup
@@ -441,4 +487,42 @@ BENCHMARK_TEMPLATE(BM_Boost_RTT, 1024)->Apply(configure_rtt);
 
 } // namespace
 
-BENCHMARK_MAIN();
+int main(int argc, char** argv) {
+    try {
+        // remove our options before google benchmark parses its own arguments.
+        int remaining = 1;
+        for (int i = 1; i < argc; ++i) {
+            const std::string_view arg{argv[i]};
+            int* cpu = nullptr;
+            if (arg.starts_with("--producer_cpu=")) { cpu = &producer_cpu; }
+            else if (arg.starts_with("--consumer_cpu=")) { cpu = &consumer_cpu; }
+            if (cpu == nullptr) {
+                argv[remaining++] = argv[i];
+                continue;
+            }
+            const auto value = arg.substr(arg.find('=') + 1);
+            const auto [end, error] = std::from_chars(value.data(), value.data() + value.size(), *cpu);
+            if (error != std::errc{} || end != value.data() + value.size() ||
+                *cpu < 0 || *cpu >= CPU_SETSIZE) {
+                throw std::runtime_error("invalid cpu id: " + std::string(value));
+            }
+        }
+        argc = remaining;
+        argv[argc] = nullptr;
+        benchmark::Initialize(&argc, argv);
+        if (benchmark::ReportUnrecognizedArguments(argc, argv)) { return 1; }
+        if (producer_cpu < 0 || consumer_cpu < 0 || producer_cpu == consumer_cpu) {
+            throw std::runtime_error("provide distinct --producer_cpu=N and --consumer_cpu=N");
+        }
+        // validate both selections before running; the main thread is the producer.
+        pin_to_cpu(consumer_cpu);
+        pin_to_cpu(producer_cpu);
+        benchmark::AddCustomContext("producer_cpu", std::to_string(producer_cpu));
+        benchmark::AddCustomContext("consumer_cpu", std::to_string(consumer_cpu));
+        benchmark::RunSpecifiedBenchmarks();
+        benchmark::Shutdown();
+    } catch (const std::exception& error) {
+        std::cerr << error.what() << '\n';
+        return 1;
+    }
+}

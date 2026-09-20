@@ -79,16 +79,42 @@ installation of these libraries is not. Normal builds leave benchmarks disabled.
 
 ## Run
 
+First inspect topology and allowed CPUs:
+
+```sh
+lscpu -e=CPU,NODE,SOCKET,CORE,ONLINE
+taskset -pc $$
+```
+
+Choose two allowed online CPUs on different physical cores (compare SOCKET/CORE
+pairs), preferably on the same socket and NUMA node. For example, only if your
+topology permits CPU 0 and CPU 2:
+
+```sh
+export PRODUCER_CPU=0
+export CONSUMER_CPU=2
+```
+
+The program accepts `--producer_cpu=N` and `--consumer_cpu=N`; these shell variables
+are conveniences, not environment settings read by the executable. Both arguments
+are required, must be different, and must name CPUs that can be selected. Malformed,
+out-of-range, or unavailable selections fail instead of silently running unpinned.
+The main thread is the producer; each consumer pins itself before reporting ready.
+Affinity setup is outside measured work. Selected CPUs are included in result context.
+
 List cases first:
 
 ```sh
-./build/bench/benchmarks/lle-spsc-benchmark --benchmark_list_tests=true
+./build/bench/benchmarks/lle-spsc-benchmark \
+  --producer_cpu="$PRODUCER_CPU" --consumer_cpu="$CONSUMER_CPU" \
+  --benchmark_list_tests=true
 ```
 
 Run throughput for all three queues at 64-byte payload and 1024 slots:
 
 ```sh
 timeout 180s ./build/bench/benchmarks/lle-spsc-benchmark \
+  --producer_cpu="$PRODUCER_CPU" --consumer_cpu="$CONSUMER_CPU" \
   --benchmark_filter='^BM_(LLE|Rigtorp|Boost)<64>/1024/' \
   --benchmark_min_time=1s \
   --benchmark_repetitions=3 \
@@ -101,6 +127,7 @@ Run all 36 throughput cases and save JSON:
 ```sh
 mkdir -p results
 timeout 600s ./build/bench/benchmarks/lle-spsc-benchmark \
+  --producer_cpu="$PRODUCER_CPU" --consumer_cpu="$CONSUMER_CPU" \
   --benchmark_filter='^BM_(LLE|Rigtorp|Boost)<' \
   --benchmark_min_time=1s \
   --benchmark_repetitions=5 \
@@ -124,6 +151,7 @@ Run all 12 RTT cases:
 ```sh
 mkdir -p results
 timeout 180s ./build/bench/benchmarks/lle-spsc-benchmark \
+  --producer_cpu="$PRODUCER_CPU" --consumer_cpu="$CONSUMER_CPU" \
   --benchmark_filter='_RTT<' \
   --benchmark_repetitions=5 \
   --benchmark_enable_random_interleaving=true \
@@ -165,11 +193,10 @@ This is a simpler learning benchmark, not yet a controlled final performance stu
 - Throughput has no explicit warm-up or complete payload pre-touch. RTT does have
   its 10,000-exchange warm-up. Framework calibration
   is not a documented steady-state warm-up phase.
-- Threads are not individually pinned. On native Linux, inspect topology with
-  `lscpu -e=CPU,CORE,SOCKET,NODE,ONLINE`. You can optionally prefix a run with
-  `taskset -c 0,2` if those CPUs are allowed and on different physical cores, but
-  this only restricts both threads to a shared CPU set; it does not assign one
-  thread to each core or prevent migration between them.
+- Both threads are pinned, but CPUs are not reserved or isolated. Interrupts,
+  preemption, competing workloads, and WSL host scheduling can still affect tails.
+  Pinning does not guarantee a small p50-to-p90 gap. Distinct logical CPU IDs may
+  still be SMT siblings; use topology to choose different physical cores.
 - Only sequence order is checked, not payload bytes, timestamp, stream, or length.
   This is not a replacement for the correctness tests. Baseline adapters expose
   the fixed-size payload array and do not validate the stored `length` field.
@@ -192,7 +219,9 @@ No winner can be inferred from this revised harness until it is measured.
 Create a Release CMake profile using `build/bench` and the `-D` options from the
 build command. Reload CMake and select `lle-spsc-benchmark` as the run target.
 Put `--benchmark_filter=^BM_LLE<64>/1024/ --benchmark_min_time=1s` in **Program
-arguments**, not CMake options. No CPU environment variables are required.
+arguments**, not CMake options. Also add `--producer_cpu=0 --consumer_cpu=2`,
+replacing these examples with your chosen CPU IDs. Use literal numbers in CLion;
+shell variable expansion in the terminal examples is performed by the shell.
 Run without the debugger. For relative JSON paths, set the working directory to
 the repository root and create `results` first.
 For RTT, use `--benchmark_filter=^BM_LLE_RTT< --benchmark_repetitions=5` instead.
