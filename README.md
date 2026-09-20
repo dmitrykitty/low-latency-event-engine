@@ -20,7 +20,7 @@ TSan launcher required when running directly from CLion.
 ## Implementation phase I
 
 For the optional Google Benchmark comparison of LLE, Boost, and rigtorp queues,
-see [SPSC benchmark instructions](docs/spsc-benchmarks.md).
+see [SPSC benchmark instructions](benchmarks/micro/README.md).
 
 Implemented:
 
