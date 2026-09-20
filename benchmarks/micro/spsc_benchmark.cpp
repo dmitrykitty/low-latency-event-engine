@@ -176,6 +176,7 @@ private:
 
 template <template <std::size_t> class Queue, std::size_t N>
 void run_throughput(benchmark::State& state) {
+    constexpr std::uint64_t warmup_count = 10'000;
     constexpr std::uint64_t event_count = 1'000'000;
 
     //slots amount
@@ -194,6 +195,7 @@ void run_throughput(benchmark::State& state) {
         bool correct = true;
         std::atomic consumer_ready{false};
         std::atomic start{false};
+        std::atomic warmup_done{false};
         bool pin_ok = true;
 
         //not like in java. new tread start to work from constructor time
@@ -214,7 +216,7 @@ void run_throughput(benchmark::State& state) {
                 _mm_pause();
             }
 
-            for (std::uint64_t expected = 0; expected < event_count; ++expected) {
+            for (std::uint64_t expected = 0; expected < warmup_count + event_count; ++expected) {
                 //if empty - try_consume -> false , wait for event in ring
                 //spin waiting for producer put event into buffer
                 while (!queue.try_consume(
@@ -227,6 +229,9 @@ void run_throughput(benchmark::State& state) {
                 {
                     _mm_pause();
                 }
+                if (expected + 1 == warmup_count) {
+                    warmup_done.store(true, std::memory_order_release);
+                }
             }
         });
 
@@ -235,7 +240,6 @@ void run_throughput(benchmark::State& state) {
             _mm_pause();
         }
 
-        state.ResumeTiming();
         if (!pin_ok) {
             consumer.join();
             state.SkipWithError("cannot pin consumer to requested cpu");
@@ -243,9 +247,23 @@ void run_throughput(benchmark::State& state) {
         }
         start.store(true, std::memory_order_release);
 
-        for (std::uint64_t i = 0; i < event_count; ++i) {
+        // warm up the same queue and threads while timing is paused.
+        for (std::uint64_t i = 0; i < warmup_count; ++i) {
             record.sequence = i;
             record.timestamp = i * 3;
+            while (!queue.try_push(record)) {
+                _mm_pause();
+            }
+        }
+        // wait for all warm-up events to be consumed and released.
+        while (!warmup_done.load(std::memory_order_acquire)) {
+            _mm_pause();
+        }
+
+        state.ResumeTiming();
+        for (std::uint64_t i = 0; i < event_count; ++i) {
+            record.sequence = warmup_count + i;
+            record.timestamp = record.sequence * 3;
 
             //spin waiting until consumer free buffer
             while (!queue.try_push(record)) {
