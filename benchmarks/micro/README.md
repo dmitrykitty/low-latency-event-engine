@@ -19,30 +19,38 @@ From the repository root:
 ```sh
 export LLE_PRODUCER_CPU=0
 export LLE_CONSUMER_CPU=2
+
+cmake -S . -B build/bench -DCMAKE_BUILD_TYPE=Release \
+  -DLLE_BUILD_BENCHMARKS=ON -DLLE_BUILD_APPS=OFF \
+  -DLLE_BUILD_TESTS=OFF -DBUILD_TESTING=OFF \
+  -DLLE_ENABLE_ASAN=OFF -DLLE_ENABLE_TSAN=OFF
+cmake --build build/bench --target lle-spsc-benchmark -j4
 bash benchmarks/run.sh
 ```
 
-The script configures and builds Release without sanitizers, then runs **all 48
-cases** (36 throughput and 12 RTT), five repetitions each, with random interleaving.
+Build once with the commands above, then use just `bash benchmarks/run.sh` for
+subsequent runs. After changing C++ code, rerun the build command yourself: the
+script deliberately does not configure, compile, or check whether the binary is stale.
+It runs **all 48 cases** (36 throughput and 12 RTT), three repetitions each, with
+random interleaving. Defaults favor a quick exploratory comparison, not a final report.
 It can also be invoked by its absolute path from another working directory.
-Required tools are Bash, CMake, a C++23 toolchain, `setarch`, `timeout`, `tee`, and
-Python 3 (used only to validate output JSON). Initial configuration downloads
-dependencies. No separate build command is needed when using the script.
+The runner needs Bash, `setarch`, `timeout`, `tee`, and `grep` plus standard shell
+utilities. Building additionally needs CMake and a C++23 toolchain. Initial
+configuration downloads dependencies. Python is no longer required by the runner.
 
 Each invocation creates a unique directory such as
 `results/spsc-20260920T120000Z-AbCdEf/` with:
 
 - `benchmarks.json`: both workloads' results, including per-run RTT percentiles;
 - `console.log`: benchmark output and diagnostics;
-- `environment.txt`: CPU selections, settings, kernel, topology, and git state;
-- `CMakeCache.txt`: build configuration;
-- `status.txt`: `complete`, `running`, or a failure indication.
+- `complete`: an empty marker created only after a successful run and basic result checks.
 
-Build output stays in the terminal. Generated result directories are git-ignored
-and previous results are never overwritten. Only `complete` runs are suitable for
-comparison. The script rejects empty selections and benchmark-reported errors;
-an interruption may leave a `running` status and partial output. Preserve source
-changes and compiler/power-setting details alongside published comparisons.
+Generated result directories are git-ignored and previous results are never
+overwritten. A directory without the `complete` marker contains an incomplete or
+failed run. The script checks for named results and reported errors, not full JSON
+schema validity. CPU selections remain in the benchmark JSON. Extra environment
+and build snapshots are no longer collected; record source/compiler/power details
+separately for published comparisons.
 
 ### ASLR
 
@@ -75,10 +83,21 @@ across queues, and only LLE's 64-byte RTT case, respectively. Quote filters beca
 | `LLE_PRODUCER_CPU` | required | producer CPU ID |
 | `LLE_CONSUMER_CPU` | required | different consumer CPU ID |
 | `LLE_BENCH_FILTER` | `.` | Google Benchmark name regex; all cases by default |
-| `LLE_BENCH_REPETITIONS` | `5` | repetitions of each selected case |
-| `LLE_BENCH_MIN_TIME` | `1s` | throughput calibration duration; RTT stays at one fixed batch |
-| `LLE_BENCH_TIMEOUT` | `600s` | benchmark timeout, excluding build |
-| `LLE_BENCH_JOBS` | `4` | parallel build jobs |
+| `LLE_BENCH_REPETITIONS` | `3` | repetitions of each selected case |
+| `LLE_BENCH_MIN_TIME` | `0.1s` | throughput calibration duration; RTT stays at one fixed batch |
+| `LLE_BENCH_TIMEOUT` | `600s` | benchmark timeout |
+
+The old defaults requested roughly 180 seconds of throughput measurements alone
+(36 cases × 5 repetitions × 1 second), plus calibration, warm-up, and RTT. The
+new defaults request roughly 10.8 seconds of throughput measurements, with the
+same extra overheads. These are approximate measurement budgets, not runtime limits.
+For a longer comparison, opt in explicitly:
+
+```sh
+LLE_BENCH_REPETITIONS=5 LLE_BENCH_MIN_TIME=1s bash benchmarks/run.sh
+```
+
+`LLE_BENCH_JOBS` no longer applies because the runner does not build.
 
 For a short smoke test, not a final performance comparison:
 
