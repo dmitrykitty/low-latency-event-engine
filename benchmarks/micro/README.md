@@ -3,11 +3,15 @@
 `spsc_benchmark.cpp` compares LLE, Boost, and rigtorp SPSC queues using Google
 Benchmark with 16, 64, 256, and 1024-byte payloads:
 
-- throughput: one million events per iteration, at 64, 1024, and 16384 slots;
+- throughput: 10,000 untimed warm-up events, then one million measured events per
+  iteration, at 64, 1024, and 16384 slots;
 - round-trip latency (RTT): two queues of 1024 slots, 10,000 warm-up exchanges,
   then 100,000 measured request/reply exchanges per repetition.
 
 Both use two threads and check sequence order. Neither measures process IPC or UDP.
+Throughput waits until the consumer releases every warm-up event before resuming
+timing. Warm-up uses the same queue and pinned threads and is excluded from
+`items_per_second`. Existing run commands are unchanged.
 
 First inspect CPUs and the allowed CPU set:
 

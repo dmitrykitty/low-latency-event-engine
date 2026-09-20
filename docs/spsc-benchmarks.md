@@ -7,7 +7,8 @@ The executable compares LLE `SpscRing`, rigtorp `SPSCQueue`, and Boost
 reads them. They share ordinary process memory: this is not a cross-process SHM
 or UDP benchmark.
 
-Each throughput iteration transfers **1,000,000 events**. Payload sizes are
+Each throughput iteration transfers **10,000 untimed warm-up events**, followed
+by **1,000,000 measured events**. Payload sizes are
 16, 64, 256, and 1024 bytes. Each queue runs at 64, 1024, and 16384 slots:
 36 throughput cases. Another 12 cases measure RTT at fixed capacity 1024.
 The consumer checks event sequence order. Full/empty queues are retried using
@@ -29,7 +30,11 @@ The code is organized as follows:
 - `BENCHMARK_MAIN()` supplies the command-line entry point.
 
 For throughput, queue allocation is outside the benchmark loop. Timing is paused for consumer
-creation and the readiness handshake. The timed section includes signaling start,
+creation, the readiness handshake, and warm-up. The producer waits until all
+10,000 warm-up events have been consumed and released before resuming timing.
+The same queue and pinned threads handle both phases; sequence checks cover both.
+Only the million measured events count toward `items_per_second`. No command-line
+changes are needed. The timed section includes
 updating event metadata, pushing, consuming, sequence validation, and joining the
 consumer. Consequently this measures the complete transfer workload, not an
 isolated push instruction. Google Benchmark chooses how many million-event batches
@@ -190,9 +195,9 @@ comparable because workload and validation have changed.
 
 This is a simpler learning benchmark, not yet a controlled final performance study:
 
-- Throughput has no explicit warm-up or complete payload pre-touch. RTT does have
-  its 10,000-exchange warm-up. Framework calibration
-  is not a documented steady-state warm-up phase.
+- Both workloads have explicit 10,000-transfer warm-up phases (round trips for
+  RTT). This is not a complete pre-touch of all 16384 slots in the largest
+  throughput configuration and does not guarantee steady-state thermal behavior.
 - Both threads are pinned, but CPUs are not reserved or isolated. Interrupts,
   preemption, competing workloads, and WSL host scheduling can still affect tails.
   Pinning does not guarantee a small p50-to-p90 gap. Distinct logical CPU IDs may
