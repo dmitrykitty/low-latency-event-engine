@@ -34,6 +34,7 @@ namespace {
 int producer_cpu = -1;
 int consumer_cpu = -1;
 
+namespace util {
 void pin_to_cpu(int cpu) {
     if (cpu < 0 || cpu >= CPU_SETSIZE) {
         throw std::runtime_error("cpu id outside supported range");
@@ -48,6 +49,31 @@ void pin_to_cpu(int cpu) {
         throw std::runtime_error("cannot pin to cpu " + std::to_string(cpu));
     }
 }
+
+int read_cpu(const char* name) {
+    const char* value = std::getenv(name);
+
+    if (value == nullptr) {
+        throw std::runtime_error(std::string{name} + " is not set");
+    }
+
+    int cpu = -1;
+
+    const std::string_view text{value};
+    const auto* end = text.data() + text.size();
+
+    const auto [ptr, error] = std::from_chars(
+        text.data(),
+        end, //to get exactly const char*
+        cpu
+        );
+
+    if (error != std::errc{} || ptr != end || cpu < 0 || cpu >= CPU_SETSIZE) {
+        throw std::runtime_error(std::string{name} + " has invalid CPU id");
+    }
+    return cpu;
+}
+} //namespace util
 
 // data to be sent
 template <std::size_t N>
@@ -201,7 +227,9 @@ void run_throughput(benchmark::State& state) {
         //not like in java. new tread start to work from constructor time
         //new os tread created and lambda is performed
         std::jthread consumer([&] {
-            try { pin_to_cpu(consumer_cpu); }
+            try {
+                util::pin_to_cpu(consumer_cpu);
+            }
             catch (const std::exception&) {
                 pin_ok = false;
                 consumer_ready.store(true, std::memory_order_release);
@@ -317,7 +345,9 @@ void run_rtt(benchmark::State& state) {
         bool pin_ok = true;
 
         std::jthread consumer([&] {
-            try { pin_to_cpu(consumer_cpu); }
+            try {
+                util::pin_to_cpu(consumer_cpu);
+            }
             catch (const std::exception&) {
                 pin_ok = false;
                 consumer_ready.store(true, std::memory_order_release);
@@ -507,38 +537,27 @@ BENCHMARK_TEMPLATE(BM_Boost_RTT, 1024)->Apply(configure_rtt);
 
 int main(int argc, char** argv) {
     try {
-        // remove our options before google benchmark parses its own arguments.
-        int remaining = 1;
-        for (int i = 1; i < argc; ++i) {
-            const std::string_view arg{argv[i]};
-            int* cpu = nullptr;
-            if (arg.starts_with("--producer_cpu=")) { cpu = &producer_cpu; }
-            else if (arg.starts_with("--consumer_cpu=")) { cpu = &consumer_cpu; }
-            if (cpu == nullptr) {
-                argv[remaining++] = argv[i];
-                continue;
-            }
-            const auto value = arg.substr(arg.find('=') + 1);
-            const auto [end, error] = std::from_chars(value.data(), value.data() + value.size(), *cpu);
-            if (error != std::errc{} || end != value.data() + value.size() ||
-                *cpu < 0 || *cpu >= CPU_SETSIZE) {
-                throw std::runtime_error("invalid cpu id: " + std::string(value));
-            }
+        producer_cpu = util::read_cpu("LLE_PRODUCER_CPU");
+        consumer_cpu = util::read_cpu("LLE_CONSUMER_CPU");
+
+        if (producer_cpu == consumer_cpu) {
+            throw std::runtime_error("producer and consumer must use different CPUs");
         }
-        argc = remaining;
-        argv[argc] = nullptr;
+
+        //producer - main thread
+        util::pin_to_cpu(producer_cpu);
+
         benchmark::Initialize(&argc, argv);
-        if (benchmark::ReportUnrecognizedArguments(argc, argv)) { return 1; }
-        if (producer_cpu < 0 || consumer_cpu < 0 || producer_cpu == consumer_cpu) {
-            throw std::runtime_error("provide distinct --producer_cpu=N and --consumer_cpu=N");
+        if (benchmark::ReportUnrecognizedArguments(argc, argv)) {
+            return 1;
         }
-        // validate both selections before running; the main thread is the producer.
-        pin_to_cpu(consumer_cpu);
-        pin_to_cpu(producer_cpu);
+
         benchmark::AddCustomContext("producer_cpu", std::to_string(producer_cpu));
         benchmark::AddCustomContext("consumer_cpu", std::to_string(consumer_cpu));
         benchmark::RunSpecifiedBenchmarks();
         benchmark::Shutdown();
+
+        return 0;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

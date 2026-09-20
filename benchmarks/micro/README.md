@@ -24,13 +24,14 @@ Choose two allowed online CPUs on different physical cores (different SOCKET/COR
 pairs), preferably on the same socket and NUMA node. These IDs are examples:
 
 ```sh
-export PRODUCER_CPU=0
-export CONSUMER_CPU=2
+export LLE_PRODUCER_CPU=0
+export LLE_CONSUMER_CPU=2
 ```
 
-The executable reads command-line arguments, not environment variables directly.
-The shell variables below just make those arguments convenient to reuse. Both CPU
-arguments are required, including when listing benchmarks.
+The executable reads these environment variables directly. Both are required and
+must contain different CPU IDs, including when listing benchmarks or requesting
+help. Export them in the terminal where you run the commands below. The former
+`--producer_cpu` and `--consumer_cpu` arguments are no longer supported.
 
 From the repository root:
 
@@ -41,7 +42,6 @@ cmake -S . -B build/bench -DCMAKE_BUILD_TYPE=Release \
   -DLLE_ENABLE_ASAN=OFF -DLLE_ENABLE_TSAN=OFF
 cmake --build build/bench --target lle-spsc-benchmark -j4
 timeout 180s ./build/bench/benchmarks/lle-spsc-benchmark \
-  --producer_cpu="$PRODUCER_CPU" --consumer_cpu="$CONSUMER_CPU" \
   --benchmark_filter='^BM_(LLE|Rigtorp|Boost)<64>/1024/' \
   --benchmark_min_time=1s --benchmark_repetitions=3
 ```
@@ -51,7 +51,6 @@ Run all 12 RTT cases and save their results:
 ```sh
 mkdir -p results
 timeout 180s ./build/bench/benchmarks/lle-spsc-benchmark \
-  --producer_cpu="$PRODUCER_CPU" --consumer_cpu="$CONSUMER_CPU" \
   --benchmark_filter='_RTT<' --benchmark_repetitions=5 \
   --benchmark_enable_random_interleaving=true \
   --benchmark_out=results/spsc-rtt.json --benchmark_out_format=json

@@ -96,14 +96,20 @@ pairs), preferably on the same socket and NUMA node. For example, only if your
 topology permits CPU 0 and CPU 2:
 
 ```sh
-export PRODUCER_CPU=0
-export CONSUMER_CPU=2
+export LLE_PRODUCER_CPU=0
+export LLE_CONSUMER_CPU=2
 ```
 
-The program accepts `--producer_cpu=N` and `--consumer_cpu=N`; these shell variables
-are conveniences, not environment settings read by the executable. Both arguments
-are required, must be different, and must name CPUs that can be selected. Malformed,
-out-of-range, or unavailable selections fail instead of silently running unpinned.
+The program reads `LLE_PRODUCER_CPU` and `LLE_CONSUMER_CPU` directly from its
+environment. Both are required, must contain different nonnegative integer CPU IDs,
+and must name CPUs that can be selected. Export them in the same terminal used for
+the commands below. Missing, malformed, and out-of-range values fail at startup.
+The producer is pinned at startup; consumer affinity is checked when its thread
+starts, not when merely listing cases. An unavailable CPU causes an affinity error
+instead of silently running unpinned. The old `--producer_cpu` and `--consumer_cpu`
+arguments are no longer supported.
+Environment parsing precedes Google Benchmark initialization, so both variables
+are also required for `--benchmark_list_tests=true` and `--help`.
 The main thread is the producer; each consumer pins itself before reporting ready.
 Affinity setup is outside measured work. Selected CPUs are included in result context.
 
@@ -111,7 +117,6 @@ List cases first:
 
 ```sh
 ./build/bench/benchmarks/lle-spsc-benchmark \
-  --producer_cpu="$PRODUCER_CPU" --consumer_cpu="$CONSUMER_CPU" \
   --benchmark_list_tests=true
 ```
 
@@ -119,7 +124,6 @@ Run throughput for all three queues at 64-byte payload and 1024 slots:
 
 ```sh
 timeout 180s ./build/bench/benchmarks/lle-spsc-benchmark \
-  --producer_cpu="$PRODUCER_CPU" --consumer_cpu="$CONSUMER_CPU" \
   --benchmark_filter='^BM_(LLE|Rigtorp|Boost)<64>/1024/' \
   --benchmark_min_time=1s \
   --benchmark_repetitions=3 \
@@ -132,7 +136,6 @@ Run all 36 throughput cases and save JSON:
 ```sh
 mkdir -p results
 timeout 600s ./build/bench/benchmarks/lle-spsc-benchmark \
-  --producer_cpu="$PRODUCER_CPU" --consumer_cpu="$CONSUMER_CPU" \
   --benchmark_filter='^BM_(LLE|Rigtorp|Boost)<' \
   --benchmark_min_time=1s \
   --benchmark_repetitions=5 \
@@ -156,7 +159,6 @@ Run all 12 RTT cases:
 ```sh
 mkdir -p results
 timeout 180s ./build/bench/benchmarks/lle-spsc-benchmark \
-  --producer_cpu="$PRODUCER_CPU" --consumer_cpu="$CONSUMER_CPU" \
   --benchmark_filter='_RTT<' \
   --benchmark_repetitions=5 \
   --benchmark_enable_random_interleaving=true \
@@ -191,42 +193,15 @@ Raw samples are not exported. Dividing throughput batch time by event count is
 not an individual event latency measurement. Older harness results are not directly
 comparable because workload and validation have changed.
 
-## Current limitations
-
-This is a simpler learning benchmark, not yet a controlled final performance study:
-
-- Both workloads have explicit 10,000-transfer warm-up phases (round trips for
-  RTT). This is not a complete pre-touch of all 16384 slots in the largest
-  throughput configuration and does not guarantee steady-state thermal behavior.
-- Both threads are pinned, but CPUs are not reserved or isolated. Interrupts,
-  preemption, competing workloads, and WSL host scheduling can still affect tails.
-  Pinning does not guarantee a small p50-to-p90 gap. Distinct logical CPU IDs may
-  still be SMT siblings; use topology to choose different physical cores.
-- Only sequence order is checked, not payload bytes, timestamp, stream, or length.
-  This is not a replacement for the correctness tests. Baseline adapters expose
-  the fixed-size payload array and do not validate the stored `length` field.
-- LLE errors other than temporary full/empty conditions are collapsed into `false`
-  by the adapter. An unexpected permanent error can cause an endless retry; use
-  the timeout above. A future improvement is separate fatal-error reporting.
-- Queue contracts and memory footprints differ. In this record layout the baseline
-  contains 24 bytes of metadata plus 64 bytes of payload; LLE uses a 128-byte slot
-  for the same payload. LLE also performs additional state/layout-related checks.
-- Joining the consumer is included in throughput timing, but excluded for RTT. Thread creation is excluded, but a
-  new consumer is created for each million-event batch.
-
-For final comparisons prefer native Linux, close competing workloads, keep power
-settings consistent, and record compiler, flags, kernel, CPU, topology, and commit
-alongside JSON. WSL runs are useful preliminary checks but should be labeled as such.
-No winner can be inferred from this revised harness until it is measured.
-
 ## CLion
 
 Create a Release CMake profile using `build/bench` and the `-D` options from the
 build command. Reload CMake and select `lle-spsc-benchmark` as the run target.
 Put `--benchmark_filter=^BM_LLE<64>/1024/ --benchmark_min_time=1s` in **Program
-arguments**, not CMake options. Also add `--producer_cpu=0 --consumer_cpu=2`,
-replacing these examples with your chosen CPU IDs. Use literal numbers in CLion;
-shell variable expansion in the terminal examples is performed by the shell.
+arguments**, not CMake options. In the run configuration's **Environment variables**,
+set `LLE_PRODUCER_CPU=0` and `LLE_CONSUMER_CPU=2`, replacing the example IDs with
+your selected CPUs. Do not put CPU options in Program arguments. A terminal's
+exports do not necessarily reach an already-running CLion instance.
 Run without the debugger. For relative JSON paths, set the working directory to
 the repository root and create `results` first.
 For RTT, use `--benchmark_filter=^BM_LLE_RTT< --benchmark_repetitions=5` instead.
