@@ -36,6 +36,11 @@ target_link_libraries(
 
 gtest_discover_tests(lle-smoke-test TEST_PREFIX "lle.smoke.")
 
+add_executable(lle-byte-io-test unit/byte_io_test.cpp)
+target_include_directories(lle-byte-io-test PRIVATE ${PROJECT_SOURCE_DIR}/src/protocol)
+target_link_libraries(lle-byte-io-test PRIVATE lle::lle lle_project_warnings GTest::gtest_main)
+gtest_discover_tests(lle-byte-io-test TEST_PREFIX "lle.protocol.byte_io.")
+
 add_executable(lle-shm-segment-test unit/shm_segment_test.cpp)
 target_link_libraries(
     lle-shm-segment-test
