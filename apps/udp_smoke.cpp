@@ -1,178 +1,112 @@
+#include "lle/transport/udp_receiver.hpp"
+#include "lle/transport/udp_sender.hpp"
+
 #include <arpa/inet.h>
+
+#include <array>
 #include <cerrno>
 #include <charconv>
-#include <cstdint>
+#include <cstddef>
 #include <cstring>
 #include <iostream>
-#include <netinet/in.h>
-#include <poll.h>
-#include <sys/socket.h>
-#include <unistd.h>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 
-constexpr int STATUS_SUCCESS = 0;
-constexpr int STATUS_ERROR = 1;
-constexpr std::size_t BUFFER_SIZE = 1024;
-constexpr int MAX_PORT_SIZE = 65535;
+namespace {
 
-static int parse_port(const char* port_str) {
+constexpr std::size_t buffer_size = 1024;
+constexpr std::size_t max_message_size = 256;
+
+int parse_port(const char* text) {
     int port = -1;
-    const std::string_view text{port_str};
-    const auto* end = text.data() + text.size();
-
-    const auto [ptr, error] = std::from_chars(
-        text.data(),
-        end, //to get exactly const char*
-        port
-        );
-
-    if (error != std::errc{} || ptr != end || port < 1 || port > MAX_PORT_SIZE) {
-        throw std::runtime_error(std::string{port_str} + " has invalid port number");
+    const std::string_view input{text};
+    const auto [end, error] = std::from_chars(input.data(), input.data() + input.size(), port);
+    if (error != std::errc{} || end != input.data() + input.size() || port < 1 || port > 65535) {
+        throw std::runtime_error(std::string{text} + " has invalid port number");
     }
     return port;
 }
 
+void print_error(std::string_view operation, lle::transport::UdpError error) {
+    using lle::transport::UdpErrorCode;
+    std::cerr << operation << ": ";
+    switch (error.code) {
+    case UdpErrorCode::InvalidAddress: std::cerr << "invalid IPv4 address"; break;
+    case UdpErrorCode::InvalidPort: std::cerr << "invalid port"; break;
+    case UdpErrorCode::Socket: std::cerr << "socket failed"; break;
+    case UdpErrorCode::Bind: std::cerr << "bind failed"; break;
+    case UdpErrorCode::Poll: std::cerr << "poll failed"; break;
+    case UdpErrorCode::Timeout: std::cerr << "timeout exceeded"; break;
+    case UdpErrorCode::Send: std::cerr << "send failed"; break;
+    case UdpErrorCode::Receive: std::cerr << "receive failed"; break;
+    case UdpErrorCode::DatagramTooLarge: std::cerr << "datagram exceeds receive buffer"; break;
+    }
+    if (error.error_number != 0) {
+        std::cerr << ": " << std::strerror(error.error_number);
+    }
+    std::cerr << '\n';
+}
+
 int receive_dm(std::uint16_t port) {
-    const int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    auto receiver = lle::transport::UdpReceiver::bind(port);
+    if (!receiver) {
+        print_error("receive", receiver.error());
+        return 1;
+    }
+    std::cout << "bound to UDP port " << receiver->local_port() << '\n';
 
-    if (socket_fd == -1) {
-        std::cerr << "socket: " << std::strerror(errno) << '\n';
-        return STATUS_ERROR;
+    std::array<std::byte, buffer_size> buffer{};
+    const auto datagram = receiver->receive(buffer, 10'000);
+    if (!datagram) {
+        print_error("receive", datagram.error());
+        return 1;
     }
 
-    sockaddr_in local_address{};
-
-    local_address.sin_family = AF_INET;                // IPV4
-    local_address.sin_port = htons(port);              // host to network short
-    local_address.sin_addr.s_addr = htonl(INADDR_ANY); // host to network long 0.0.0.0
-
-    // listen on 0.0.0.0:port
-
-    if (bind(
-            socket_fd,
-            reinterpret_cast<const sockaddr*>(&local_address),
-            sizeof(local_address)
-        ) == -1) {
-        std::cerr << "bind: " << std::strerror(errno) << '\n';
-        close(socket_fd);
-        return STATUS_ERROR;
-    }
-    std::cout << "bound to UDP port " << port << '\n';
-
-    // if something happen
-    pollfd poll_fd{};
-    poll_fd.fd = socket_fd;
-    poll_fd.events = POLLIN;
-
-    const int timeout_ms = 10'000;
-    const int poll_result = poll(&poll_fd, 1, timeout_ms);
-
-    if (poll_result < 0) {
-        std::cerr << "poll: " << std::strerror(errno) << '\n';
-        close(socket_fd);
-        return STATUS_ERROR;
-    }
-
-    if (poll_result == 0) {
-        std::cerr << "timeout exceeded\n";
-        close(socket_fd);
-        return STATUS_ERROR;
-    }
-
-    if ((poll_fd.revents & POLLIN) == 0) {
-        std::cerr << "no POLLIN even occured\n";
-        close(socket_fd);
-        return STATUS_ERROR;
-    }
-
-    char buff[BUFFER_SIZE];
-    sockaddr_in sender_address{};
-    socklen_t sender_address_len = sizeof(sender_address);
-
-    const auto received = recvfrom(
-        socket_fd,
-        buff,
-        BUFFER_SIZE,
-        0,
-        reinterpret_cast<sockaddr*>(&sender_address),
-        &sender_address_len
-    );
-
-    if (received < 0) {
-        std::cerr << "recvfrom: " << std::strerror(errno) << '\n';
-        close(socket_fd);
-        return STATUS_ERROR;
-    }
-
-    char sender_ip[INET_ADDRSTRLEN];
-    if (inet_ntop(AF_INET, &sender_address.sin_addr, sender_ip, sizeof(sender_ip)) == nullptr) {
+    char sender_ip[INET_ADDRSTRLEN]{};
+    if (inet_ntop(AF_INET, &datagram->peer.sin_addr, sender_ip, sizeof(sender_ip)) == nullptr) {
         std::cerr << "inet_ntop: " << std::strerror(errno) << '\n';
-        close(socket_fd);
-        return STATUS_ERROR;
+        return 1;
     }
-
-    const std::uint16_t sender_port = ntohs(sender_address.sin_port);
-    std::cout << "client: received packet (" << received << " bytes) from " << sender_ip << ":"
-              << sender_port << "\n\t";
-    std::cout.write(buff, received);
+    std::cout << "client: received packet (" << datagram->size << " bytes) from " << sender_ip
+              << ':' << ntohs(datagram->peer.sin_port) << "\n\t";
+    std::cout.write(
+        reinterpret_cast<const char*>(buffer.data()),
+        static_cast<std::streamsize>(datagram->size)
+    );
     std::cout << '\n';
-
-    close(socket_fd);
-    return STATUS_SUCCESS;
+    return 0;
 }
 
-int send_dm(std::uint16_t port, const char* message, const char* ip) {
-    const int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
-
-    if (socket_fd == -1) {
-        std::cerr << "socket: " << std::strerror(errno) << '\n';
-        return STATUS_ERROR;
-    }
-
-    sockaddr_in address{};
-    address.sin_family = AF_INET;
-    address.sin_port = htons(port);
-    const int result = inet_pton(AF_INET, ip, &address.sin_addr);
-    if (result < 0) {
-        std::cerr << "inet_pton" << std::strerror(errno) << '\n';
-        close(socket_fd);
-        return STATUS_ERROR;
-    }
-
-    if (result == 0) {
-        std::cerr << "invalid IPv4 address\n";
-        close(socket_fd);
-        return STATUS_ERROR;
-    }
-    const std::size_t message_len = std::strlen(message);
-    constexpr std::size_t MAX_MESSAGE_SIZE = 256;
-
-    if (message_len > MAX_MESSAGE_SIZE) {
+int send_dm(std::uint16_t port, const char* ip, const char* message) {
+    const std::size_t message_size = std::strlen(message);
+    if (message_size > max_message_size) {
         std::cerr << "message too large\n";
-        close(socket_fd);
-        return STATUS_ERROR;
+        return 1;
     }
 
-    const auto sent = sendto(socket_fd, message, message_len,0,
-            reinterpret_cast<const sockaddr*>(&address), sizeof(address));
-
-    if (sent < 0) {
-        std::cerr << "sendto: " << std::strerror(errno) << '\n';
-        close(socket_fd);
-        return STATUS_ERROR;
+    const auto destination = lle::transport::UdpAddress::ipv4(ip, port);
+    if (!destination) {
+        print_error("send", destination.error());
+        return 1;
     }
-
-    if (static_cast<std::size_t>(sent) != message_len) {
-        std::cerr << "sendto: incomplete datagram\n";
-        close(socket_fd);
-        return STATUS_ERROR;
+    auto sender = lle::transport::UdpSender::open();
+    if (!sender) {
+        print_error("send", sender.error());
+        return 1;
     }
-    std::cout << "server: message send to " << ip << ":" << port << '\n';
-    close(socket_fd);
-    return STATUS_SUCCESS;
+    const auto bytes = std::as_bytes(std::span{message, message_size});
+    const auto sent = sender->send_to(bytes, *destination);
+    if (!sent) {
+        print_error("send", sent.error());
+        return 1;
+    }
+    std::cout << "server: message send to " << ip << ':' << port << '\n';
+    return 0;
 }
+
+} // namespace
 
 int main(int argc, char* argv[]) {
     try {
@@ -180,34 +114,20 @@ int main(int argc, char* argv[]) {
             std::cerr << "usage:\n"
                       << "  lle-udp-smoke receive <port>\n"
                       << "  lle-udp-smoke send <port> <ip> <message>\n";
-            return STATUS_ERROR;
+            return 1;
         }
 
-        const std::string side{argv[1]};
-
-        if (side == "receive") {
-            if (argc != 3) {
-                std::cerr << "usage: lle-udp-smoke receive <port>\n";
-                return STATUS_ERROR;
-            }
-            const int port = parse_port(argv[2]);
-            return receive_dm(static_cast<std::uint16_t>(port));
+        const std::string_view mode{argv[1]};
+        if (mode == "receive" && argc == 3) {
+            return receive_dm(static_cast<std::uint16_t>(parse_port(argv[2])));
         }
-
-        if (side == "send") {
-            if (argc != 5) {
-                std::cerr << "usage: lle-udp-smoke send <port> <ip> <message>\n";
-                return STATUS_ERROR;
-            }
-            const int port = parse_port(argv[2]);
-            return send_dm(static_cast<std::uint16_t>(port), argv[4], argv[3]);
+        if (mode == "send" && argc == 5) {
+            return send_dm(static_cast<std::uint16_t>(parse_port(argv[2])), argv[3], argv[4]);
         }
-
-        std::cerr << "unknown mode: " << side << '\n';
-        return STATUS_ERROR;
-
-    } catch (std::exception& e) {
-        std::cerr << e.what() << '\n';
-        return STATUS_ERROR;
+        std::cerr << "invalid mode or arguments\n";
+        return 1;
+    } catch (const std::exception& error) {
+        std::cerr << error.what() << '\n';
+        return 1;
     }
 }
