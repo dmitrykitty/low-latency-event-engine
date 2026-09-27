@@ -57,6 +57,7 @@ enum class DecodeError : std::uint8_t {
     MalformedFrame,
     NonZeroPadding,
     ArithmeticOverflow,
+    UnsupportedBatch,
 };
 
 // One-event DATA. The event payload refers to the

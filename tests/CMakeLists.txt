@@ -45,6 +45,10 @@ add_executable(lle-encoder-test unit/encoder_test.cpp)
 target_link_libraries(lle-encoder-test PRIVATE lle::lle lle_project_warnings GTest::gtest_main)
 gtest_discover_tests(lle-encoder-test TEST_PREFIX "lle.protocol.encoder.")
 
+add_executable(lle-decoder-test unit/decoder_test.cpp)
+target_link_libraries(lle-decoder-test PRIVATE lle::lle lle_project_warnings GTest::gtest_main)
+gtest_discover_tests(lle-decoder-test TEST_PREFIX "lle.protocol.decoder.")
+
 add_executable(lle-shm-segment-test unit/shm_segment_test.cpp)
 target_link_libraries(
     lle-shm-segment-test
