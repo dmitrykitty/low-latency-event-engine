@@ -68,7 +68,7 @@ decode_data(std::span<const std::byte> packet) noexcept {
         payload_offset + payload_size,
         kDataFixedBytes + frame_size - (payload_offset + payload_size)
     );
-    if (std::ranges::all_of(padding, [](std::byte value) { return value == std::byte{0}; })) {
+    if (!std::ranges::all_of(padding, [](std::byte value) { return value == std::byte{0}; })) {
         return std::unexpected(DecodeError::NonZeroPadding);
     }
 
