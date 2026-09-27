@@ -28,7 +28,7 @@ public:
 
     // timeout_ms < 0 blocks indefinitely; otherwise return Timeout when it expires.
     [[nodiscard]] std::expected<ReceivedDatagram, UdpError>
-    receive(std::span<std::byte> buffer, int timeout_ms = -1) noexcept;
+    receive(std::span<std::byte> buffer, int timeout_ms = -1) const noexcept;
 
 private:
     UdpReceiver(int socket_fd, std::uint16_t local_port) noexcept

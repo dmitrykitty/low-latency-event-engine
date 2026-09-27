@@ -10,9 +10,12 @@
 namespace lle::transport {
 
 std::expected<UdpReceiver, UdpError> UdpReceiver::bind(std::uint16_t port) noexcept {
-    const int socket_fd = ::socket(AF_INET, SOCK_DGRAM, 0);
+    const int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (socket_fd < 0) {
-        return std::unexpected(UdpError{UdpErrorCode::Socket, errno});
+        return std::unexpected(UdpError{
+            .code = UdpErrorCode::Socket,
+            .error_number = errno
+        });
     }
 
     sockaddr_in local{};
@@ -21,12 +24,15 @@ std::expected<UdpReceiver, UdpError> UdpReceiver::bind(std::uint16_t port) noexc
     local.sin_addr.s_addr = htonl(INADDR_ANY);
     if (::bind(socket_fd, reinterpret_cast<const sockaddr*>(&local), sizeof(local)) < 0) {
         const int error_number = errno;
-        ::close(socket_fd);
-        return std::unexpected(UdpError{UdpErrorCode::Bind, error_number});
+        close(socket_fd);
+        return std::unexpected(UdpError{
+            .code = UdpErrorCode::Bind,
+            .error_number = error_number
+        });
     }
 
     socklen_t local_size = sizeof(local);
-    if (::getsockname(socket_fd, reinterpret_cast<sockaddr*>(&local), &local_size) < 0) {
+    if (getsockname(socket_fd, reinterpret_cast<sockaddr*>(&local), &local_size) < 0) {
         const int error_number = errno;
         ::close(socket_fd);
         return std::unexpected(UdpError{UdpErrorCode::Bind, error_number});
@@ -44,18 +50,24 @@ UdpReceiver::~UdpReceiver() {
 }
 
 std::expected<ReceivedDatagram, UdpError>
-UdpReceiver::receive(std::span<std::byte> buffer, int timeout_ms) noexcept {
+UdpReceiver::receive(std::span<std::byte> buffer, int timeout_ms) const noexcept {
     if (timeout_ms >= 0) {
         pollfd descriptor{socket_fd_, POLLIN, 0};
-        const int ready = ::poll(&descriptor, 1, timeout_ms);
+        const int ready = poll(&descriptor, 1, timeout_ms);
         if (ready < 0) {
-            return std::unexpected(UdpError{UdpErrorCode::Poll, errno});
+            return std::unexpected(UdpError{
+                .code = UdpErrorCode::Poll,
+                .error_number = errno
+            });
         }
         if (ready == 0) {
-            return std::unexpected(UdpError{UdpErrorCode::Timeout});
+            return std::unexpected(UdpError{.code = UdpErrorCode::Timeout});
         }
         if ((descriptor.revents & POLLIN) == 0) {
-            return std::unexpected(UdpError{UdpErrorCode::Poll, EIO});
+            return std::unexpected(UdpError{
+                .code = UdpErrorCode::Poll,
+                .error_number = EIO
+            });
         }
     }
 
@@ -66,12 +78,15 @@ UdpReceiver::receive(std::span<std::byte> buffer, int timeout_ms) noexcept {
     message.msg_namelen = sizeof(peer);
     message.msg_iov = &data;
     message.msg_iovlen = 1;
-    const auto received = ::recvmsg(socket_fd_, &message, 0);
+    const auto received = recvmsg(socket_fd_, &message, 0);
     if (received < 0) {
-        return std::unexpected(UdpError{UdpErrorCode::Receive, errno});
+        return std::unexpected(UdpError{
+            .code = UdpErrorCode::Receive,
+            .error_number = errno
+        });
     }
     if ((message.msg_flags & MSG_TRUNC) != 0) {
-        return std::unexpected(UdpError{UdpErrorCode::DatagramTooLarge});
+        return std::unexpected(UdpError{.code = UdpErrorCode::DatagramTooLarge});
     }
     return ReceivedDatagram{static_cast<std::size_t>(received), peer};
 }

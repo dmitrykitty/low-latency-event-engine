@@ -72,3 +72,7 @@ find_package(Threads REQUIRED)
 add_executable(lle-ring-concurrency-test integration/ring_concurrency_test.cpp)
 target_link_libraries(lle-ring-concurrency-test PRIVATE lle::lle lle_project_warnings GTest::gtest_main Threads::Threads)
 gtest_discover_tests(lle-ring-concurrency-test TEST_PREFIX "lle.shm.concurrent." PROPERTIES TIMEOUT 60)
+
+add_executable(lle-udp-transport-test integration/udp_transport_test.cpp)
+target_link_libraries(lle-udp-transport-test PRIVATE lle::lle lle_project_warnings GTest::gtest_main)
+gtest_discover_tests(lle-udp-transport-test TEST_PREFIX "lle.transport." PROPERTIES TIMEOUT 10)
