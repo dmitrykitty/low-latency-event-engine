@@ -41,6 +41,10 @@ target_include_directories(lle-byte-io-test PRIVATE ${PROJECT_SOURCE_DIR}/src/pr
 target_link_libraries(lle-byte-io-test PRIVATE lle::lle lle_project_warnings GTest::gtest_main)
 gtest_discover_tests(lle-byte-io-test TEST_PREFIX "lle.protocol.byte_io.")
 
+add_executable(lle-encoder-test unit/encoder_test.cpp)
+target_link_libraries(lle-encoder-test PRIVATE lle::lle lle_project_warnings GTest::gtest_main)
+gtest_discover_tests(lle-encoder-test TEST_PREFIX "lle.protocol.encoder.")
+
 add_executable(lle-shm-segment-test unit/shm_segment_test.cpp)
 target_link_libraries(
     lle-shm-segment-test

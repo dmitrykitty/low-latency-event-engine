@@ -1,5 +1,7 @@
 #include "shm/spsc_ring.hpp"
 
+#include "lle/detail/alignment.hpp"
+
 #include <algorithm>
 #include <limits>
 #include <memory>
@@ -8,14 +10,6 @@
 namespace lle::shm {
 
 namespace {
-std::size_t align_up(std::size_t value, std::size_t alignment) noexcept {
-    const auto remainder = value & (alignment - 1);
-    if (remainder == 0) {
-        return value;
-    }
-    return value + alignment - remainder;
-}
-
 // called only after initialize() validates the inputs and constructs the header.
 void fill_preamble(
     RingPreamble* preamble,
@@ -90,7 +84,7 @@ SpscRing::required_bytes(const RingConfig& config) noexcept {
 
     constexpr auto max_size = std::numeric_limits<std::size_t>::max();
     const std::size_t slot_bytes = ring_slot_metadata_bytes + config.slot_payload_capacity;
-    const std::size_t stride = align_up(slot_bytes, ring_cache_line_bytes);
+    const std::size_t stride = detail::align_up(slot_bytes, ring_cache_line_bytes);
 
     if (stride > std::numeric_limits<std::uint32_t>::max()) {
         return std::unexpected(RingError::SizeOverflow);
