@@ -29,13 +29,16 @@ Implemented:
 - Fixed-capacity SPSC publication, acquisition, explicit release, and publication closure.
 - Release/acquire synchronization, full/empty detection, slot reuse, and draining after closure.
 - GoogleTest unit tests, threaded stress testing, and a two-process test transferring 10 million events.
+- Single-event LLEP DATA encoding/decoding and reusable UDP transport.
+- A basic library sender: ingress SHM -> one DATA packet -> UDP -> ingress slot release.
+  See [sender behavior and usage](docs/architecture.md#basic-sender-loop).
 
 The shared-memory ring implementation is complete under the documented single-producer/single-consumer
-and startup assumptions. UDP transport and end-to-end event delivery remain unfinished; sender and
-receiver executables are scaffolding. The next task is the two-host UDP smoke test.
+and startup assumptions. The receiver loop and complete end-to-end delivery remain unfinished; sender and
+receiver executables are scaffolding. The next task is the receiver loop into egress SHM.
 
-Latest verification: 67 development tests, 31 ring tests under ASan/UBSan, and 66 in-process tests
-under TSan passed. These are correctness checks, not latency benchmarks.
+See [testing instructions](docs/testing.md) for development and sanitizer checks.
+These are correctness checks, not latency benchmarks.
 
 ## Planned data path
 
@@ -59,4 +62,5 @@ challenge-specific integration belongs under **adapters/**.
 - **lle-shm-segment-test**: shared-memory lifecycle tests;
 - **lle-ring-init-test**: ring layout, initialization, and attachment tests;
 - **lle-ring-transfer-test**: publication, acquisition, release, closure, and boundary tests;
-- **lle-ring-concurrency-test**: thread and process integration tests.
+- **lle-ring-concurrency-test**: thread and process integration tests;
+- **lle-sender-test**: ingress SHM to UDP sender integration and failure handling.
