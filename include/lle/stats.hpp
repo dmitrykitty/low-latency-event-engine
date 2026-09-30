@@ -16,6 +16,10 @@ struct EngineStats {
     std::uint64_t unrecovered{};
     std::uint64_t ingress_full{};
     std::uint64_t malformed_packets{};
+    std::uint64_t events_dropped{};
+    std::uint64_t encode_errors{};
+    std::uint64_t send_errors{};
+    std::uint64_t ingress_errors{};
 };
 
 } // namespace lle
