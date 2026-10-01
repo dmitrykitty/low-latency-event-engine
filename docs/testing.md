@@ -105,3 +105,20 @@ An exit code of 66 with `unexpected memory mapping` is a startup failure. A TSan
 instead identifies conflicting accesses and their stack traces. Inspect the diagnostic, not just the
 exit code.
 
+
+## Sender integration tests
+
+```bash
+ctest --preset dev -R 'lle.sender.' --output-on-failure
+ctest --preset asan -R 'lle.sender.' --output-on-failure
+ctest --preset tsan -R 'lle.sender.' --output-on-failure
+```
+
+Build the matching preset first. `lle-sender-test` creates real POSIX ingress SHM,
+uses `Sender` to send over loopback UDP, and decodes received DATA packets. It checks
+metadata and binary payload preservation, empty/maximum payloads, FIFO ordering,
+slot reuse across wraps, closure, stop requests, configured datagram limits, startup
+errors, malformed slots, and encoding/send failures. The send failure test uses a
+broadcast address without socket broadcast permission, so Linux rejects the send
+without transmitting a packet. Test worker threads are stopped and joined before
+reading counters or cleaning up shared memory.

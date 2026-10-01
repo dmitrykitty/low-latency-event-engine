@@ -76,3 +76,7 @@ gtest_discover_tests(lle-ring-concurrency-test TEST_PREFIX "lle.shm.concurrent."
 add_executable(lle-udp-transport-test integration/udp_transport_test.cpp)
 target_link_libraries(lle-udp-transport-test PRIVATE lle::lle lle_project_warnings GTest::gtest_main)
 gtest_discover_tests(lle-udp-transport-test TEST_PREFIX "lle.transport." PROPERTIES TIMEOUT 10)
+
+add_executable(lle-sender-test integration/sender_test.cpp)
+target_link_libraries(lle-sender-test PRIVATE lle::lle lle_project_warnings GTest::gtest_main Threads::Threads)
+gtest_discover_tests(lle-sender-test TEST_PREFIX "lle.sender." PROPERTIES TIMEOUT 10)
