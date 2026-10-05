@@ -10,6 +10,17 @@
 namespace lle::transport {
 
 std::expected<UdpReceiver, UdpError> UdpReceiver::bind(std::uint16_t port) noexcept {
+    UdpAddress address{};
+    address.native.sin_family = AF_INET;
+    address.native.sin_port = htons(port);
+    address.native.sin_addr.s_addr = htonl(INADDR_ANY);
+    return bind(address);
+}
+
+std::expected<UdpReceiver, UdpError> UdpReceiver::bind(const UdpAddress& address) noexcept {
+    if (address.native.sin_family != AF_INET) {
+        return std::unexpected(UdpError{.code = UdpErrorCode::InvalidAddress});
+    }
     const int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (socket_fd < 0) {
         return std::unexpected(UdpError{
@@ -18,11 +29,8 @@ std::expected<UdpReceiver, UdpError> UdpReceiver::bind(std::uint16_t port) noexc
         });
     }
 
-    sockaddr_in local{};
-    local.sin_family = AF_INET;
-    local.sin_port = htons(port);
-    local.sin_addr.s_addr = htonl(INADDR_ANY);
-    if (::bind(socket_fd, reinterpret_cast<const sockaddr*>(&local), sizeof(local)) < 0) {
+    if (::bind(socket_fd, reinterpret_cast<const sockaddr*>(&address.native),
+               sizeof(address.native)) < 0) {
         const int error_number = errno;
         close(socket_fd);
         return std::unexpected(UdpError{
@@ -31,6 +39,7 @@ std::expected<UdpReceiver, UdpError> UdpReceiver::bind(std::uint16_t port) noexc
         });
     }
 
+    sockaddr_in local{};
     socklen_t local_size = sizeof(local);
     if (getsockname(socket_fd, reinterpret_cast<sockaddr*>(&local), &local_size) < 0) {
         const int error_number = errno;

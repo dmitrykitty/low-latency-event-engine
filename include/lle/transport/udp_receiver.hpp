@@ -17,6 +17,9 @@ class UdpReceiver {
 public:
     // Bind to all local IPv4 addresses. Port 0 requests an ephemeral test port.
     [[nodiscard]] static std::expected<UdpReceiver, UdpError> bind(std::uint16_t port) noexcept;
+    // Bind to a local IPv4 endpoint prepared during startup. Port 0 is allowed.
+    [[nodiscard]] static std::expected<UdpReceiver, UdpError>
+    bind(const UdpAddress& address) noexcept;
 
     UdpReceiver(const UdpReceiver&) = delete;
     UdpReceiver& operator=(const UdpReceiver&) = delete;
