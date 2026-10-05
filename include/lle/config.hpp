@@ -2,6 +2,7 @@
 
 #include "lle/event.hpp"
 #include "lle/protocol/types.hpp"
+#include "shm/spsc_ring.hpp"
 
 #include <cstdint>
 #include <string>
@@ -28,6 +29,7 @@ struct ReceiverConfig {
     Endpoint listen;
     Endpoint nack_target;
     std::string egress_shm_name;
+    shm::RingConfig egress_ring{};
     DeliveryMode delivery_mode{DeliveryMode::BestEffort};
     std::uint32_t reorder_window_packets{4096};
     std::uint32_t recovery_timeout_us{100};
