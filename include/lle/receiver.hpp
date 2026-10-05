@@ -27,6 +27,9 @@ public:
     // Join the worker first. The receiver owns egress SHM and must unlink it.
     ~Receiver();
 
+    // Returns the bound port, including the port selected when listen.port is 0.
+    [[nodiscard]] std::uint16_t local_port() const noexcept { return udp_.local_port(); }
+
     // Call on one thread. Decode DATA packets and publish their events to egress.
     // Drop malformed packets and events that cannot be published (BestEffort).
     // Close egress publication before returning; queued events remain readable.

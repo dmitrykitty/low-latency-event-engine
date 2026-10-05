@@ -20,6 +20,9 @@ struct EngineStats {
     std::uint64_t encode_errors{};
     std::uint64_t send_errors{};
     std::uint64_t ingress_errors{};
+    std::uint64_t receive_errors{};
+    std::uint64_t egress_full{};
+    std::uint64_t egress_errors{};
 };
 
 } // namespace lle
