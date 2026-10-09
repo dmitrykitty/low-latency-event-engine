@@ -1,0 +1,69 @@
+# Three-byte payload layout
+
+This example gives both SHM rings an eight-byte payload capacity. Offsets are
+relative to the beginning of a slot or an LLEP packet. Each SHM segment also has
+one 192-byte RingHeader before its slots. Blocks are labelled with their actual
+byte sizes; their visual sizes are schematic.
+
+```mermaid
+%%{init: {"flowchart": {"rankSpacing": 25, "nodeSpacing": 25}}}%%
+flowchart LR
+    accTitle: Three payload bytes in SHM and LLEP
+    accDescr: With an eight-byte payload capacity, each SHM slot occupies 64 bytes. Encoding three payload bytes creates a 48-byte LLEP packet. Only the event metadata and active payload are converted between layouts.
+
+    subgraph ingressLayout["Ingress SHM slot - 64 B"]
+        direction TB
+        ingressHeader["0-31: RingSlotHeader - 32 B<br/>event_sequence<br/>source_timestamp_ns<br/>stream_id / payload_length<br/>reserved"]
+        ingressPayload["32-34: DE AD BE<br/>3 B payload"]
+        ingressUnused["35-39: unused payload capacity<br/>5 B"]
+        ingressPadding["40-63: stride padding<br/>24 B"]
+        ingressHeader ~~~ ingressPayload
+        ingressPayload ~~~ ingressUnused
+        ingressUnused ~~~ ingressPadding
+    end
+
+    subgraph wireLayout["LLEP DATA packet - 48 B"]
+        direction TB
+        commonHeader["0-7: common LLEP header - 8 B<br/>magic / version and type<br/>packet_length / session_id"]
+        packetSequence["8-15: packet_sequence<br/>8 B"]
+        dataInformation["16-35: DATA information - 20 B<br/>first_event_sequence<br/>base_timestamp_ns<br/>stream_id"]
+        frameHeader["36-41: event-frame header - 6 B<br/>timestamp_delta_ns = 0<br/>payload_length = 3"]
+        wirePayload["42-44: DE AD BE<br/>3 B payload"]
+        wirePadding["45-47: zero frame padding<br/>3 B"]
+        commonHeader ~~~ packetSequence
+        packetSequence ~~~ dataInformation
+        dataInformation ~~~ frameHeader
+        frameHeader ~~~ wirePayload
+        wirePayload ~~~ wirePadding
+    end
+
+    subgraph egressLayout["Egress SHM slot - 64 B"]
+        direction TB
+        egressHeader["0-31: RingSlotHeader - 32 B<br/>event_sequence<br/>source_timestamp_ns<br/>stream_id / payload_length<br/>reserved"]
+        egressPayload["32-34: DE AD BE<br/>3 B payload"]
+        egressUnused["35-39: unused payload capacity<br/>5 B"]
+        egressPadding["40-63: stride padding<br/>24 B"]
+        egressHeader ~~~ egressPayload
+        egressPayload ~~~ egressUnused
+        egressUnused ~~~ egressPadding
+    end
+
+    ingressLayout -->|"try_acquire<br/>encode_data"| wireLayout
+    wireLayout -->|"UDP hop<br/>decode_data<br/>try_publish"| egressLayout
+
+    classDef shmHeader fill:#fef3c7,stroke:#b45309,color:#0f172a
+    classDef wireHeader fill:#e0f2fe,stroke:#0369a1,color:#0f172a
+    classDef payload fill:#dcfce7,stroke:#15803d,color:#0f172a
+    classDef padding fill:#f8fafc,stroke:#64748b,color:#0f172a
+    class ingressHeader,egressHeader shmHeader
+    class commonHeader,packetSequence,dataInformation,frameHeader wireHeader
+    class ingressPayload,wirePayload,egressPayload payload
+    class ingressUnused,ingressPadding,wirePadding,egressUnused,egressPadding padding
+```
+
+The SHM header and unused capacity stay local. `encode_data()` writes the LLEP
+fields and zero frame padding into a packet buffer. Egress gets a newly written
+SHM slot header and the same three payload bytes.
+
+[Mermaid source](data-layout-example.mmd) · [PNG preview](data-layout-example.png) ·
+[Field offsets and example](../docs/data-flow.md#worked-example-three-payload-bytes)

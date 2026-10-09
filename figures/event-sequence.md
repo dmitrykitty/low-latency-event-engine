@@ -1,0 +1,44 @@
+# One event from producer to consumer
+
+This is the successful path with free ring slots and a valid event. Solid arrows
+show operations or UDP transmission; dashed arrows show local API results. Sender
+releases ingress after encoding and before sending. UDP provides no delivery
+acknowledgement in the current BestEffort path.
+
+```mermaid
+sequenceDiagram
+    accTitle: One event from producer to consumer
+    accDescr: In the successful path, payload bytes are copied into ingress, encoded into the sender packet buffer, and copied from the receiver packet buffer into egress. Acquired views remain valid only until release.
+    autonumber
+    participant Producer
+    participant Ingress as Ingress ring
+    participant Sender
+    participant Receiver
+    participant Egress as Egress ring
+    participant Consumer
+
+    Producer->>Ingress: try_publish(event)
+    Note over Producer,Ingress: Copy payload into ingress SHM
+    Ingress-->>Producer: Ok
+    Sender->>Ingress: try_acquire()
+    Ingress-->>Sender: EventView into ingress slot
+    Sender->>Sender: encode_data(view, packet)
+    Note right of Sender: Copy payload into<br/>sender packet buffer
+    Sender->>Ingress: release()
+    Note over Producer,Ingress: Ingress slot can be reused
+    Sender-)Receiver: LLEP DATA over UDP
+    Note over Sender,Receiver: send_to / receive<br/>No delivery acknowledgement
+    Receiver->>Receiver: decode_data(packet)
+    Note right of Receiver: EventView into<br/>receive packet buffer
+    Receiver->>Egress: try_publish(decoded.event)
+    Note over Receiver,Egress: Copy payload before next receive
+    Egress-->>Receiver: Ok
+    Consumer->>Egress: try_acquire()
+    Egress-->>Consumer: EventView into egress slot
+    Consumer->>Consumer: Read payload
+    Consumer->>Egress: release()
+    Note over Egress,Consumer: View is invalid after release<br/>Slot can be reused
+```
+
+[Editable source](event-sequence.mmd) · [PNG preview](event-sequence.png) ·
+[Architecture notes](../docs/architecture.md#one-event-from-producer-to-consumer)
