@@ -3,6 +3,15 @@
 A C++23/Linux transport for moving small opaque binary events between processes and hosts, with an emphasis on
 predictable tail latency, explicit backpressure, and measurable delivery guarantees.
 
+## Architecture guide
+
+Start with the [component map](docs/architecture.md#current-data-path), then follow
+[one event in the sequence diagram](docs/architecture.md#one-event-from-producer-to-consumer).
+They show how producer, ingress, Sender, Receiver, egress, and consumer connect,
+where payloads are copied, and when ring slots can be reused. The
+[ownership guide](docs/architecture.md#resource-and-thread-ownership) explains who
+creates and unlinks SHM and how to stop the worker threads.
+
 ## Command-line build
 
     cmake --preset dev
@@ -30,12 +39,18 @@ Implemented:
 - Release/acquire synchronization, full/empty detection, slot reuse, and draining after closure.
 - GoogleTest unit tests, threaded stress testing, and a two-process test transferring 10 million events.
 - Single-event LLEP DATA encoding/decoding and reusable UDP transport.
-- A basic library sender: ingress SHM -> one DATA packet -> UDP -> ingress slot release.
+- A basic library sender: ingress SHM -> one DATA packet -> ingress slot release -> UDP.
   See [sender behavior and usage](docs/architecture.md#basic-sender-loop).
+- A basic library receiver: UDP -> DATA validation -> egress SHM, with malformed
+  packet accounting, explicit drops, and idle shutdown.
+  See [receiver behavior and usage](docs/architecture.md#basic-receiver-loop).
+- A local producer -> sender -> receiver -> consumer integration test.
 
 The shared-memory ring implementation is complete under the documented single-producer/single-consumer
-and startup assumptions. The receiver loop and complete end-to-end delivery remain unfinished; sender and
-receiver executables are scaffolding. The next task is the receiver loop into egress SHM.
+and startup assumptions. The basic library data path supports one event per packet
+and one BestEffort receiver. Sender and receiver executables remain scaffolding.
+Receiver packet sequencing with gap/duplicate accounting and serial-unicast fan-out
+are the next protocol-path steps.
 
 See [testing instructions](docs/testing.md) for development and sanitizer checks.
 These are correctness checks, not latency benchmarks.
@@ -58,9 +73,14 @@ challenge-specific integration belongs under **adapters/**.
 - **lle**: static library and public headers;
 - **lle-sender**: sender process entry point;
 - **lle-receiver**: receiver process entry point;
+- **lle-udp-smoke**: standalone UDP smoke program;
 - **lle-smoke-test**: minimal CTest target validating the toolchain and public types.
+- **lle-byte-io-test**, **lle-encoder-test**, **lle-decoder-test**: single-event protocol unit tests;
 - **lle-shm-segment-test**: shared-memory lifecycle tests;
 - **lle-ring-init-test**: ring layout, initialization, and attachment tests;
 - **lle-ring-transfer-test**: publication, acquisition, release, closure, and boundary tests;
 - **lle-ring-concurrency-test**: thread and process integration tests;
+- **lle-udp-transport-test**: loopback UDP and protocol transport integration;
 - **lle-sender-test**: ingress SHM to UDP sender integration and failure handling.
+- **lle-receiver-test**: UDP to egress SHM receiver integration and the complete local data path.
+- **lle-spsc-benchmark**: optional Release throughput/RTT comparison, enabled with `LLE_BUILD_BENCHMARKS=ON`.
