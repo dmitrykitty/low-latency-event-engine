@@ -122,3 +122,19 @@ errors, malformed slots, and encoding/send failures. The send failure test uses 
 broadcast address without socket broadcast permission, so Linux rejects the send
 without transmitting a packet. Test worker threads are stopped and joined before
 reading counters or cleaning up shared memory.
+
+## Receiver integration tests
+
+```bash
+ctest --preset dev -R 'lle.receiver.' --output-on-failure
+ctest --preset asan -R 'lle.receiver.' --output-on-failure
+ctest --preset tsan -R 'lle.receiver.' --output-on-failure
+```
+
+Build the matching preset first. `lle-receiver-test` sends real loopback UDP DATA
+packets and consumes events through a separate egress SHM attachment. It checks
+metadata and binary payload preservation, FIFO order and slot reuse, empty/maximum
+payloads, malformed/oversized packets, full egress and small payload capacity,
+closure, idle stop, move ownership, unlinking, bind failures, and invalid settings.
+It also checks the complete local producer -> sender -> receiver -> consumer path.
+All counter reads occur after stopping and joining the worker.

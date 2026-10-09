@@ -80,3 +80,7 @@ gtest_discover_tests(lle-udp-transport-test TEST_PREFIX "lle.transport." PROPERT
 add_executable(lle-sender-test integration/sender_test.cpp)
 target_link_libraries(lle-sender-test PRIVATE lle::lle lle_project_warnings GTest::gtest_main Threads::Threads)
 gtest_discover_tests(lle-sender-test TEST_PREFIX "lle.sender." PROPERTIES TIMEOUT 10)
+
+add_executable(lle-receiver-test integration/receiver_test.cpp)
+target_link_libraries(lle-receiver-test PRIVATE lle::lle lle_project_warnings GTest::gtest_main Threads::Threads)
+gtest_discover_tests(lle-receiver-test TEST_PREFIX "lle.receiver." PROPERTIES TIMEOUT 10)
