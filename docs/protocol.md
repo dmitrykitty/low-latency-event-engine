@@ -4,6 +4,20 @@ Status: protocol version 1.
 
 LLEP is a compact binary protocol for transporting ordered streams of opaque events. This document defines only the LLEP representation. Shared-memory representation and synchronization are specified separately in `docs/memory-model.md`.
 
+## Current implementation scope
+
+The specification below defines the full version-1 format. The library currently
+implements `encode_data()` and `decode_data()` for exactly one event per DATA
+packet. The decoder returns `DecodedDataView`, whose payload refers to the caller's
+packet buffer. DATA packets containing additional event frames are rejected with
+`DecodeError::UnsupportedBatch`; non-DATA message types are rejected.
+
+Batching, NACK encoding/decoding, receiver gap and duplicate accounting,
+retransmission, and ordered recovery remain later implementation steps. The
+decoded-view hierarchy below describes the protocol model; the current API exposes
+a single-event DATA view. See the [architecture guide](architecture.md) for the
+implemented sender and receiver path.
+
 ## Protocol properties
 
 LLEP:1.0.0 has these properties:

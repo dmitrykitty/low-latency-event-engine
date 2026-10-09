@@ -10,6 +10,26 @@ CMake uses an installed GoogleTest package or downloads version 1.17.0. Tests re
 `BUILD_TESTING=ON` and `LLE_BUILD_TESTS=ON`; the development and sanitizer presets enable them.
 Build before running CTest: building also discovers the individual GoogleTest cases.
 
+## Test map
+
+Use `ctest --preset dev -R '<filter>' --output-on-failure` to run one group after
+building. Replace `dev` with `asan` or `tsan` for the matching sanitizer build.
+For TSan, also add `-E SeparateMapping` to exclude the cross-process test described
+below.
+
+| Filter | Coverage | Source |
+|--------|----------|--------|
+| `lle.protocol.` | Byte helpers and single-event DATA encoding/decoding | [unit tests](../tests/unit/) |
+| `lle.shm.(segment|ring|transfer).` | SHM lifecycle, ring layout, publication, acquisition, and closure | [unit tests](../tests/unit/) |
+| `lle.shm.concurrent.` | Threaded and two-process SPSC integrity tests | [ring_concurrency_test.cpp](../tests/integration/ring_concurrency_test.cpp) |
+| `lle.transport.` | Loopback UDP, protocol round trip, truncation, and address errors | [udp_transport_test.cpp](../tests/integration/udp_transport_test.cpp) |
+| `lle.sender.` | Ingress SHM to UDP and sender failure handling | [sender_test.cpp](../tests/integration/sender_test.cpp) |
+| `lle.receiver.` | UDP to egress SHM and the complete local producer-to-consumer path | [receiver_test.cpp](../tests/integration/receiver_test.cpp) |
+
+These are correctness checks. Two-host full-path delivery, fan-out, recovery,
+parser fuzzing, and end-to-end latency measurements remain separate work.
+For the data path and ownership rules, see the [architecture guide](architecture.md).
+
 ## Development and integration tests
 
 ```bash
@@ -18,7 +38,7 @@ cmake --build --preset dev
 ctest --preset dev --output-on-failure
 ```
 
-Run only the two concurrency/integration tests:
+Run only the two SHM concurrency tests:
 
 ```bash
 ctest --preset dev -R 'lle.shm.concurrent.' --output-on-failure
@@ -45,10 +65,17 @@ test timeout. Timeout is a test failure, not a throughput measurement.
 ```bash
 cmake --preset asan
 cmake --build --preset asan
+ctest --preset asan --output-on-failure
+```
+
+The full suite includes protocol, SHM, UDP transport, sender, and receiver tests.
+To run only the ring unit tests and both SHM concurrency tests:
+
+```bash
 ctest --preset asan -R 'lle.shm.(ring|transfer|concurrent)' --output-on-failure
 ```
 
-This checks ring unit tests and both integration tests for memory errors and undefined behavior.
+ASan/UBSan check for memory errors and undefined behavior.
 These sanitizers do not replace a data-race detector.
 
 ## ThreadSanitizer
