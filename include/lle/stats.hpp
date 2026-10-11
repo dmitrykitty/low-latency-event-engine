@@ -10,6 +10,9 @@ struct EngineStats {
     std::uint64_t packets_sent{};
     std::uint64_t packets_received{};
     std::uint64_t gaps_detected{};
+    std::uint64_t packets_missed{};
+    std::uint64_t duplicate_or_old_packets{};
+    std::uint64_t wrong_session_packets{};
     std::uint64_t nack_sent{};
     std::uint64_t retransmitted{};
     std::uint64_t recovered{};

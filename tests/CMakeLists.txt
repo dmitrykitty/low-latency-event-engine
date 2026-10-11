@@ -25,6 +25,10 @@ endif()
 
 include(GoogleTest)
 
+add_executable(lle-gap-detector-test unit/gap_detector_test.cpp)
+target_link_libraries(lle-gap-detector-test PRIVATE lle::lle lle_project_warnings GTest::gtest_main)
+gtest_discover_tests(lle-gap-detector-test TEST_PREFIX "lle.reliability.gap.")
+
 add_executable(lle-smoke-test unit/smoke_test.cpp)
 target_link_libraries(
     lle-smoke-test

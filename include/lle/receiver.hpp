@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lle/gap_detector.hpp"
 #include "lle/config.hpp"
 #include "lle/init_error.hpp"
 #include "lle/stats.hpp"
@@ -57,6 +58,7 @@ private:
     // Shared with request_stop(); the data-path state is used by run() alone.
     std::atomic<bool> stop_requested_{false};
     EngineStats stats_{};
+    GapDetector gap_detector_;
 };
 
 } // namespace lle

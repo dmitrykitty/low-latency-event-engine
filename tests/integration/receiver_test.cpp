@@ -86,8 +86,9 @@ protected:
         return EventView{7, sequence, 456, payload_};
     }
 
-    bool send_event(const EventView& event, std::uint64_t packet_sequence = 1) {
-        const auto encoded = protocol::encode_data(event, 7, packet_sequence, packet_);
+    bool send_event(const EventView& event, std::uint64_t packet_sequence = 1,
+                    std::uint32_t session_id = 7) {
+        const auto encoded = protocol::encode_data(event, session_id, packet_sequence, packet_);
         return encoded && udp_->send_to(std::span{packet_}.first(*encoded), destination_);
     }
 
@@ -198,6 +199,91 @@ TEST_F(ReceiverTest, ReceivesEmptyAndMaximumPayloadsAndDrainsAfterStop) {
     EXPECT_EQ(receiver_->stats().events_out, 2U);
 }
 
+TEST_F(ReceiverTest, CountsGapRangesSeparatelyFromMissingPackets) {
+    ASSERT_TRUE(initialize_receiver());
+    start_worker();
+    // Event sequences and stream IDs are independent of transport sequencing.
+    for (const auto sequence : {1ULL, 6ULL, 9ULL}) {
+        auto expected = event(100 + sequence);
+        expected.stream_id = static_cast<StreamId>(sequence);
+        ASSERT_TRUE(send_event(expected, sequence));
+        const auto received = acquire_event();
+        ASSERT_TRUE(received.has_value());
+        EXPECT_EQ(received->sequence, expected.sequence);
+        EXPECT_EQ(received->stream_id, expected.stream_id);
+        ASSERT_TRUE(consumer_->release());
+    }
+    stop_worker();
+    const auto stats = receiver_->stats();
+    EXPECT_EQ(stats.packets_received, 3U);
+    EXPECT_EQ(stats.events_out, 3U);
+    EXPECT_EQ(stats.gaps_detected, 2U);
+    EXPECT_EQ(stats.packets_missed, 6U);
+    EXPECT_EQ(stats.events_dropped, 0U);
+}
+
+TEST_F(ReceiverTest, DropsDuplicatesLatePacketsAndForeignSessionWithoutRedelivery) {
+    config_.egress_ring.slot_count = 4;
+    ASSERT_TRUE(initialize_receiver());
+    ASSERT_TRUE(send_event(event(100), 1));
+    ASSERT_TRUE(send_event(event(200), 1)); // Duplicate.
+    ASSERT_TRUE(send_event(event(300), 3)); // Gap: packet 2.
+    ASSERT_TRUE(send_event(event(400), 2)); // Late arrival.
+    ASSERT_TRUE(send_event(event(500), 99, 8)); // Other session.
+    ASSERT_TRUE(send_event(event(600), 4)); // Proves earlier packets were processed.
+    start_worker();
+    ASSERT_TRUE(wait_for_publication(3));
+    stop_worker();
+
+    for (const auto sequence : {100ULL, 300ULL, 600ULL}) {
+        const auto received = consumer_->try_acquire();
+        ASSERT_TRUE(received.has_value());
+        EXPECT_EQ(received->sequence, sequence);
+        ASSERT_TRUE(consumer_->release());
+    }
+    const auto closed = consumer_->try_acquire();
+    ASSERT_FALSE(closed.has_value());
+    EXPECT_EQ(closed.error(), shm::AcquireError::Closed);
+    const auto stats = receiver_->stats();
+    EXPECT_EQ(stats.packets_received, 6U);
+    EXPECT_EQ(stats.events_in, 3U);
+    EXPECT_EQ(stats.events_out, 3U);
+    EXPECT_EQ(stats.events_dropped, 3U);
+    EXPECT_EQ(stats.duplicate_or_old_packets, 2U);
+    EXPECT_EQ(stats.wrong_session_packets, 1U);
+    EXPECT_EQ(stats.gaps_detected, 1U);
+    EXPECT_EQ(stats.packets_missed, 1U);
+}
+
+TEST_F(ReceiverTest, RemembersSequenceEvenWhenEventCannotBePublished) {
+    config_.egress_ring.slot_payload_capacity = 2;
+    ASSERT_TRUE(initialize_receiver());
+    ASSERT_TRUE(send_event(event(1), 1)); // Payload does not fit egress.
+    auto empty = event(2);
+    empty.payload = {};
+    ASSERT_TRUE(send_event(empty, 1)); // Same packet cannot be retried with another payload.
+    ASSERT_TRUE(send_event(empty, 2));
+    start_worker();
+    const auto received = acquire_event();
+    ASSERT_TRUE(received.has_value());
+    EXPECT_EQ(received->sequence, 2U);
+    EXPECT_TRUE(received->payload.empty());
+    ASSERT_TRUE(consumer_->release());
+    stop_worker();
+    const auto closed = consumer_->try_acquire();
+    ASSERT_FALSE(closed.has_value());
+    EXPECT_EQ(closed.error(), shm::AcquireError::Closed);
+    const auto stats = receiver_->stats();
+    EXPECT_EQ(stats.packets_received, 3U);
+    EXPECT_EQ(stats.events_in, 2U);
+    EXPECT_EQ(stats.events_out, 1U);
+    EXPECT_EQ(stats.events_dropped, 2U);
+    EXPECT_EQ(stats.egress_errors, 1U);
+    EXPECT_EQ(stats.duplicate_or_old_packets, 1U);
+    EXPECT_EQ(stats.gaps_detected, 0U);
+    EXPECT_EQ(stats.packets_missed, 0U);
+}
+
 TEST_F(ReceiverTest, RejectsMalformedAndOversizedPacketsAndContinues) {
     ASSERT_TRUE(initialize_receiver());
     const auto encoded = protocol::encode_data(event(), 7, 1, packet_);
@@ -221,6 +307,8 @@ TEST_F(ReceiverTest, RejectsMalformedAndOversizedPacketsAndContinues) {
     EXPECT_EQ(stats.events_in, 1U);
     EXPECT_EQ(stats.events_out, 1U);
     EXPECT_EQ(stats.receive_errors, 0U);
+    EXPECT_EQ(stats.gaps_detected, 1U);
+    EXPECT_EQ(stats.packets_missed, 4U);
 }
 
 TEST_F(ReceiverTest, DropsPayloadThatDoesNotFitEgressAndContinues) {

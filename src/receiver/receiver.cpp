@@ -86,7 +86,8 @@ Receiver::Receiver(Receiver&& other) noexcept
       udp_(std::move(other.udp_)),
       // Moving is allowed only when no thread is running the receiver.
       stop_requested_(other.stop_requested_.load(std::memory_order_relaxed)),
-      stats_(other.stats_) {
+      stats_(other.stats_),
+      gap_detector_(other.gap_detector_) {
     other.request_stop();
 }
 
@@ -125,6 +126,22 @@ void Receiver::run() {
         if (!decoded) {
             ++stats_.malformed_packets;
             continue;
+        }
+
+        const auto checked = gap_detector_.check(decoded->session_id, decoded->packet_sequence);
+        if (checked.status != PacketStatus::Accepted) {
+            if (checked.status == PacketStatus::DuplicateOrOld) {
+                ++stats_.duplicate_or_old_packets;
+            } else {
+                ++stats_.wrong_session_packets;
+            }
+            ++stats_.events_dropped;
+            continue;
+        }
+
+        if (checked.gap > 0) {
+            ++stats_.gaps_detected;
+            stats_.packets_missed += checked.gap;
         }
 
         ++stats_.events_in;
