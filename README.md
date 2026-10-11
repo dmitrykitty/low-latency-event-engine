@@ -25,7 +25,7 @@ with exact encoded bytes.
 Sanitizer configurations use separate build trees:
 
     cmake --preset asan && cmake --build --preset asan && ctest --preset asan
-    cmake --preset tsan && cmake --build --preset tsan && ctest --preset tsan -E SeparateMapping
+    cmake --preset tsan && cmake --build --preset tsan && ctest --preset tsan -E 'SeparateMapping|SeparateProcesses'
 
 See [testing instructions](docs/testing.md) for integration tests, sanitizer coverage, and the
 TSan launcher required when running directly from CLion.
@@ -43,18 +43,19 @@ Implemented:
 - Release/acquire synchronization, full/empty detection, slot reuse, and draining after closure.
 - GoogleTest unit tests, threaded stress testing, and a two-process test transferring 10 million events.
 - Single-event LLEP DATA encoding/decoding and reusable UDP transport.
-- A basic library sender: ingress SHM -> one DATA packet -> ingress slot release -> UDP.
+- A library sender: ingress SHM -> one DATA packet -> ingress slot release -> serial UDP fan-out.
   See [sender behavior and usage](docs/architecture.md#basic-sender-loop).
 - A basic library receiver: UDP -> DATA validation -> egress SHM, with malformed
   packet accounting, explicit drops, and idle shutdown.
   See [receiver behavior and usage](docs/architecture.md#basic-receiver-loop).
 - A local producer -> sender -> receiver -> consumer integration test.
 - Packet sequencing with exact missing ranges, gap counters, and duplicate/old-packet suppression.
+- Byte-identical fan-out to 1, 2, and 4 destinations, including the full path through receiver processes.
 
 The shared-memory ring implementation is complete under the documented single-producer/single-consumer
 and startup assumptions. The basic library data path supports one event per packet
-and one BestEffort receiver. Sender and receiver executables remain scaffolding.
-Serial-unicast fan-out is the next protocol-path step.
+and serial-unicast fan-out to multiple BestEffort receivers. Sender and receiver
+executables remain scaffolding. Full-path benchmark/provenance tooling is the next step.
 
 See [testing instructions](docs/testing.md) for development and sanitizer checks.
 These are correctness checks, not latency benchmarks.

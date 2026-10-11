@@ -2,7 +2,7 @@
 
 Start with the component map, then follow one event in the sequence diagram. The
 diagrams describe the current library implementation: one event per DATA packet,
-one receiver destination, and BestEffort delivery. Sender and receiver executables
+serial-unicast fan-out, and BestEffort delivery. Sender and receiver executables
 are still scaffolds; the integration tests connect the library components.
 
 ## Current data path
@@ -50,6 +50,9 @@ tests. Across hosts, only UDP crosses the network; each SHM segment stays local.
 LLEP is the binary format of the UDP datagram, not another process or queue.
 The producer and consumer supply application logic; the engine treats payloads as
 opaque bytes.
+
+The diagrams show one receiver branch. Sender repeats the UDP send for each
+configured destination; every receiver has its own egress ring and consumer.
 
 | Component | Responsibility | Code to read |
 |-----------|----------------|--------------|
@@ -154,17 +157,16 @@ events unconsumed. Closing ingress does not send a remote stop command to Receiv
 ## Boundary
 
 The engine boundary includes shared-memory ingress/egress, transport framing,
-backpressure, and metrics. UDP fan-out and optional bounded recovery extend this
-boundary in later steps. External producers and consumers own application semantics.
+backpressure, serial-unicast UDP fan-out, and metrics. Optional bounded recovery
+extends this boundary in later steps. External producers and consumers own application semantics.
 
 ## Later steps
 
-- serial-unicast UDP fan-out to multiple receivers;
 - opportunistic batching;
 - CPU affinity and receive-mode experiments;
 - optional NACK, retransmission history, and bounded reorder window.
 
-The diagrams above cover the implemented path. Batching, fan-out, NACKs,
+The diagrams above cover the implemented path. Batching, NACKs,
 retransmission, and ordered recovery remain later steps.
 
 ## Hot-path implementation constraints
@@ -181,32 +183,46 @@ This base alignment allows the naturally aligned offsets defined by LLEP to prod
 
 ## Basic sender loop
 
-`Sender::initialize(config)` attaches to an existing, initialized ingress segment,
-attaches its consumer ring handle, parses one numeric IPv4 destination, opens the
+`Sender::initialize(config)` parses every numeric IPv4 destination, attaches to an
+existing initialized ingress segment and its consumer ring handle, opens the
 UDP socket, and chooses a nonzero random session ID. Startup failures return
 `InitError`. The external producer owns initialization and unlinking of ingress SHM.
 The sender owns its attachment and socket through the existing resource classes.
+The destination list must be nonempty. Every address and port is validated before
+attaching SHM or opening the socket; one invalid endpoint rejects initialization.
+`destinations_` owns the prepared `UdpAddress` values. Its vector is allocated only
+at startup and moved with Sender. Addresses are numeric IPv4, without DNS lookup.
 
 The loop is deliberately small:
 
 ```text
-try_acquire -> encode one DATA packet -> release -> send_to
+try_acquire -> encode one DATA packet -> release -> send_to each destination
 ```
 
 `run()` reuses an aligned, fixed-size packet buffer. The configured datagram limit
 bounds the encoder's output, including padding. Event metadata and payload bytes
 come directly from the acquired ring view; the view remains valid until release.
 Encoding copies the payload into the packet buffer, so the loop releases the
-ingress slot before the socket send.
-Packet sequences start at 1 and advance for each encoded packet, even if sending
-fails. Invalid events do not consume a packet sequence. The sender stops before
+ingress slot before any socket send. A span views the encoded bytes without copying;
+the same bytes are sent serially through one UDP socket in configuration order.
+There is no parsing, encoding, vector growth, or added synchronization inside the
+destination loop. An error for one destination does not skip later destinations.
+Packet sequences start at 1 and advance once after sending each encoded packet to
+all destinations, even if some or all sends fail. All copies share one session ID
+and packet sequence. Invalid events do not consume a packet sequence. The sender stops before
 packet sequence overflow; a new sender instance starts a new session.
 
 BestEffort consumes and counts events that fail encoding or sending, then continues
 with the next slot. This prevents an unsendable event from blocking the queue.
-`events_in` counts acquired events; `events_out` and `packets_sent` count successful
-socket sends, which do not guarantee remote delivery. `events_dropped`,
-`encode_errors`, and `send_errors` record failed attempts. An invalid ring slot
+`events_in` counts acquired events. `events_out` counts events with at least one
+successful socket send; `events_dropped` counts events that fail encoding or cannot
+be sent to any destination. Thus `events_in = events_out + events_dropped` after
+the loop returns. `packets_sent` counts successful destination sends and
+`send_errors` counts failed destination sends; `encode_errors` counts failed
+encodings once per input event. A successful send does not guarantee remote delivery.
+For one event and four destinations, four successful sends produce `events_out = 1`
+and `packets_sent = 4`. If one send fails, the counters are `events_out = 1`,
+`packets_sent = 3`, `send_errors = 1`, and `events_dropped = 0`. An invalid ring slot
 increments `ingress_errors` and stops the loop because it cannot be safely acquired.
 
 An empty ring is polled continuously when `busy_spin_ingress` is true. When false,
@@ -216,9 +232,9 @@ Closing publication drains queued events before `run()` returns. Calling
 remaining queue untouched. Read `stats()` after `run()` returns, joining its worker
 thread first. Moving or destroying the sender also requires that worker to be stopped.
 
-This milestone supports one destination and BestEffort delivery with `cpu == -1`.
-Initialization rejects unsupported settings. Fan-out, affinity,
-and loss recovery remain later plan steps. The command-line sender is still a scaffold;
+This milestone supports multiple destinations and BestEffort delivery with `cpu == -1`.
+Initialization rejects unsupported settings. Affinity and loss recovery remain
+later plan steps. The command-line sender is still a scaffold;
 the working sender loop is available through the library API.
 
 Example, after the external producer has created and initialized `/my-ingress`:
@@ -227,6 +243,7 @@ Example, after the external producer has created and initialized `/my-ingress`:
 lle::SenderConfig config;
 config.ingress_shm_name = "/my-ingress";
 config.receivers.push_back({"127.0.0.1", 9000});
+config.receivers.push_back({"127.0.0.1", 9001});
 auto sender = lle::Sender::initialize(config);
 if (!sender) {
     // Report sender.error() during startup.
