@@ -12,6 +12,7 @@
 #include <string>
 #include <thread>
 #include <utility>
+#include <vector>
 
 #include <sys/mman.h>
 #include <unistd.h>
@@ -70,6 +71,79 @@ protected:
     std::optional<Sender> sender_;
     std::jthread worker_;
 };
+
+class SenderFanoutTest : public SenderTest, public testing::WithParamInterface<unsigned> {};
+
+TEST_P(SenderFanoutTest, SendsIdenticalDatagramsAndSequencesToEveryDestination) {
+    std::vector<transport::UdpReceiver> receivers;
+    config_.receivers.clear();
+    for (unsigned i = 0; i < GetParam(); ++i) {
+        auto receiver = transport::UdpReceiver::bind(0);
+        ASSERT_TRUE(receiver.has_value());
+        config_.receivers.push_back({"127.0.0.1", receiver->local_port()});
+        receivers.push_back(std::move(*receiver));
+    }
+    auto sender = Sender::initialize(config_);
+    ASSERT_TRUE(sender.has_value());
+    // Moving the initialized sender must preserve the full destination list.
+    sender_.emplace(std::move(*sender));
+    auto empty = event(101);
+    empty.payload = {};
+    std::array<std::byte, protocol::kMaxSingleEventPayloadBytes> payload{};
+    payload.front() = std::byte{0x12};
+    payload.back() = std::byte{0xfe};
+    const EventView maximum{8, 999, 1234, payload};
+    ASSERT_EQ(producer_->try_publish(empty), PublishResult::Ok);
+    ASSERT_EQ(producer_->try_publish(maximum), PublishResult::Ok);
+    ASSERT_TRUE(producer_->close_publication());
+    sender_->run();
+
+    std::uint32_t session_id = 0;
+    std::uint64_t packet_sequence = 1;
+    for (const auto& expected : {empty, maximum}) {
+        alignas(8) std::array<std::byte, protocol::kMaxPacketBytes> reference{};
+        std::size_t reference_size = 0;
+        for (auto& receiver : receivers) {
+            alignas(8) std::array<std::byte, protocol::kMaxPacketBytes> packet{};
+            const auto received = receiver.receive(packet, 1000);
+            ASSERT_TRUE(received.has_value());
+            const auto datagram = std::span{packet}.first(received->size);
+            if (reference_size == 0) {
+                reference = packet;
+                reference_size = received->size;
+            } else {
+                EXPECT_TRUE(std::ranges::equal(datagram, std::span{reference}.first(reference_size)));
+            }
+            const auto decoded = protocol::decode_data(datagram);
+            ASSERT_TRUE(decoded.has_value());
+            if (session_id == 0) {
+                session_id = decoded->session_id;
+            }
+            EXPECT_NE(session_id, 0U);
+            EXPECT_EQ(decoded->session_id, session_id);
+            EXPECT_EQ(decoded->packet_sequence, packet_sequence);
+            EXPECT_EQ(decoded->event.stream_id, expected.stream_id);
+            EXPECT_EQ(decoded->event.sequence, expected.sequence);
+            EXPECT_EQ(decoded->event.source_timestamp_ns, expected.source_timestamp_ns);
+            EXPECT_TRUE(std::ranges::equal(decoded->event.payload, expected.payload));
+        }
+        ++packet_sequence;
+    }
+    for (auto& receiver : receivers) {
+        std::array<std::byte, protocol::kMaxPacketBytes> packet{};
+        const auto extra = receiver.receive(packet, 10);
+        ASSERT_FALSE(extra.has_value());
+        EXPECT_EQ(extra.error().code, transport::UdpErrorCode::Timeout);
+    }
+    const auto stats = sender_->stats();
+    EXPECT_EQ(stats.events_in, 2U);
+    EXPECT_EQ(stats.events_out, 2U);
+    EXPECT_EQ(stats.packets_sent, 2U * GetParam());
+    EXPECT_EQ(stats.events_dropped, 0U);
+    EXPECT_EQ(stats.send_errors, 0U);
+}
+
+INSTANTIATE_TEST_SUITE_P(ReceiverCounts, SenderFanoutTest, testing::Values(1U, 2U, 4U));
 
 TEST_F(SenderTest, SendsQueuedEventAndDrainsClosedIngress) {
     auto sender = Sender::initialize(config_);
@@ -249,6 +323,85 @@ TEST_F(SenderTest, CountsSendFailuresAndReleasesSlots) {
     EXPECT_EQ(header->consumer.position.load(), 2U);
 }
 
+TEST_F(SenderTest, ContinuesFanoutAfterSendErrorAndCountsPartialSuccess) {
+    auto second = transport::UdpReceiver::bind(0);
+    ASSERT_TRUE(second.has_value());
+    // One valid receiver before the failing address and another after it.
+    config_.receivers.push_back({"255.255.255.255", receiver_->local_port()});
+    config_.receivers.push_back({"127.0.0.1", second->local_port()});
+    auto sender = Sender::initialize(config_);
+    ASSERT_TRUE(sender.has_value());
+    ASSERT_EQ(producer_->try_publish(event(100)), PublishResult::Ok);
+    ASSERT_EQ(producer_->try_publish(event(200)), PublishResult::Ok);
+    ASSERT_TRUE(producer_->close_publication());
+    sender->run();
+
+    std::uint32_t session_id = 0;
+    for (std::uint64_t sequence = 1; sequence <= 2; ++sequence) {
+        for (auto* receiver : {&*receiver_, &*second}) {
+            alignas(8) std::array<std::byte, protocol::kMaxPacketBytes> packet{};
+            const auto received = receiver->receive(packet, 1000);
+            ASSERT_TRUE(received.has_value());
+            const auto decoded = protocol::decode_data(std::span{packet}.first(received->size));
+            ASSERT_TRUE(decoded.has_value());
+            if (session_id == 0) {
+                session_id = decoded->session_id;
+            }
+            EXPECT_EQ(decoded->session_id, session_id);
+            EXPECT_EQ(decoded->packet_sequence, sequence);
+            EXPECT_EQ(decoded->event.sequence, sequence * 100);
+        }
+    }
+    const auto stats = sender->stats();
+    EXPECT_EQ(stats.events_in, 2U);
+    EXPECT_EQ(stats.events_out, 2U);
+    EXPECT_EQ(stats.packets_sent, 4U);
+    EXPECT_EQ(stats.send_errors, 2U);
+    EXPECT_EQ(stats.events_dropped, 0U);
+    auto* header = reinterpret_cast<shm::RingHeader*>(segment_->bytes().data());
+    EXPECT_EQ(header->consumer.position.load(), 2U);
+}
+
+TEST_F(SenderTest, CountsEventDropOnceWhenEveryDestinationFails) {
+    config_.receivers = {{"255.255.255.255", 9000}, {"255.255.255.255", 9001}};
+    auto sender = Sender::initialize(config_);
+    ASSERT_TRUE(sender.has_value());
+    ASSERT_EQ(producer_->try_publish(event(1)), PublishResult::Ok);
+    ASSERT_EQ(producer_->try_publish(event(2)), PublishResult::Ok);
+    ASSERT_TRUE(producer_->close_publication());
+    sender->run();
+    const auto stats = sender->stats();
+    EXPECT_EQ(stats.events_in, 2U);
+    EXPECT_EQ(stats.events_out, 0U);
+    EXPECT_EQ(stats.packets_sent, 0U);
+    EXPECT_EQ(stats.send_errors, 4U);
+    EXPECT_EQ(stats.events_dropped, 2U);
+}
+
+TEST_F(SenderTest, CountsEncodingFailureOnceWithMultipleDestinations) {
+    auto second = transport::UdpReceiver::bind(0);
+    ASSERT_TRUE(second.has_value());
+    config_.receivers.push_back({"127.0.0.1", second->local_port()});
+    auto sender = Sender::initialize(config_);
+    ASSERT_TRUE(sender.has_value());
+    ASSERT_EQ(producer_->try_publish(event(0)), PublishResult::Ok);
+    ASSERT_TRUE(producer_->close_publication());
+    sender->run();
+    const auto stats = sender->stats();
+    EXPECT_EQ(stats.events_in, 1U);
+    EXPECT_EQ(stats.encode_errors, 1U);
+    EXPECT_EQ(stats.events_dropped, 1U);
+    EXPECT_EQ(stats.packets_sent, 0U);
+    EXPECT_EQ(stats.events_out, 0U);
+    EXPECT_EQ(stats.send_errors, 0U);
+    for (auto* receiver : {&*receiver_, &*second}) {
+        std::array<std::byte, protocol::kMaxPacketBytes> packet{};
+        const auto received = receiver->receive(packet, 10);
+        ASSERT_FALSE(received.has_value());
+        EXPECT_EQ(received.error().code, transport::UdpErrorCode::Timeout);
+    }
+}
+
 TEST_F(SenderTest, StopsOnInvalidIngressSlotWithoutSending) {
     auto sender = Sender::initialize(config_);
     ASSERT_TRUE(sender.has_value());
@@ -303,9 +456,6 @@ TEST_F(SenderTest, RejectsUnsupportedOrInvalidConfiguration) {
     invalid.receivers.clear();
     expect_error(invalid, InitError::InvalidConfig);
     invalid = config_;
-    invalid.receivers.push_back(invalid.receivers.front());
-    expect_error(invalid, InitError::InvalidConfig);
-    invalid = config_;
     invalid.max_datagram_bytes = 43;
     expect_error(invalid, InitError::InvalidConfig);
     invalid.max_datagram_bytes = 1417;
@@ -321,6 +471,12 @@ TEST_F(SenderTest, RejectsUnsupportedOrInvalidConfiguration) {
     expect_error(invalid, InitError::AddressResolution);
     invalid = config_;
     invalid.receivers.front().port = 0;
+    expect_error(invalid, InitError::AddressResolution);
+    invalid = config_;
+    invalid.receivers.push_back({"not-an-ip", 9000});
+    expect_error(invalid, InitError::AddressResolution);
+    invalid = config_;
+    invalid.receivers.push_back({"127.0.0.1", 0});
     expect_error(invalid, InitError::AddressResolution);
 }
 

@@ -88,3 +88,7 @@ gtest_discover_tests(lle-sender-test TEST_PREFIX "lle.sender." PROPERTIES TIMEOU
 add_executable(lle-receiver-test integration/receiver_test.cpp)
 target_link_libraries(lle-receiver-test PRIVATE lle::lle lle_project_warnings GTest::gtest_main Threads::Threads)
 gtest_discover_tests(lle-receiver-test TEST_PREFIX "lle.receiver." PROPERTIES TIMEOUT 10)
+
+add_executable(lle-fanout-process-test integration/fanout_process_test.cpp)
+target_link_libraries(lle-fanout-process-test PRIVATE lle::lle lle_project_warnings GTest::gtest_main Threads::Threads)
+gtest_discover_tests(lle-fanout-process-test TEST_PREFIX "lle.fanout." PROPERTIES TIMEOUT 10)

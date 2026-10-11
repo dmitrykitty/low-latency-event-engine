@@ -14,7 +14,7 @@ Build before running CTest: building also discovers the individual GoogleTest ca
 
 Use `ctest --preset dev -R '<filter>' --output-on-failure` to run one group after
 building. Replace `dev` with `asan` or `tsan` for the matching sanitizer build.
-For TSan, also add `-E SeparateMapping` to exclude the cross-process test described
+For TSan, also add `-E 'SeparateMapping|SeparateProcesses'` to exclude the cross-process tests described
 below.
 
 | Filter | Coverage | Source |
@@ -26,8 +26,9 @@ below.
 | `lle.transport.` | Loopback UDP, protocol round trip, truncation, and address errors | [udp_transport_test.cpp](../tests/integration/udp_transport_test.cpp) |
 | `lle.sender.` | Ingress SHM to UDP and sender failure handling | [sender_test.cpp](../tests/integration/sender_test.cpp) |
 | `lle.receiver.` | UDP to egress SHM, gap/duplicate/session counters, suppression of repeat delivery, and the complete local producer-to-consumer path | [receiver_test.cpp](../tests/integration/receiver_test.cpp) |
+| `lle.fanout.` | Full path through 1, 2, and 4 receiver processes and their separate egress rings | [fanout_process_test.cpp](../tests/integration/fanout_process_test.cpp) |
 
-These are correctness checks. Two-host full-path delivery, fan-out, recovery,
+These are correctness checks. Two-host full-path delivery, fan-out performance, recovery,
 parser fuzzing, and end-to-end latency measurements remain separate work.
 For the data path and ownership rules, see the [architecture guide](architecture.md).
 
@@ -69,7 +70,7 @@ cmake --build --preset asan
 ctest --preset asan --output-on-failure
 ```
 
-The full suite includes protocol, SHM, UDP transport, sender, and receiver tests.
+The full suite includes protocol, SHM, UDP transport, sender, receiver, and process fan-out tests.
 To run only the ring unit tests and both SHM concurrency tests:
 
 ```bash
@@ -84,7 +85,7 @@ These sanitizers do not replace a data-race detector.
 ```bash
 cmake --preset tsan
 cmake --build --preset tsan
-ctest --preset tsan -E SeparateMapping --output-on-failure
+ctest --preset tsan -E 'SeparateMapping|SeparateProcesses' --output-on-failure
 ```
 
 For just the threaded stress test:
@@ -93,9 +94,9 @@ For just the threaded stress test:
 ctest --preset tsan -R ThreadsTransfer --output-on-failure
 ```
 
-We exclude the separate-process test because TSan tracks threads within a process; it does not provide
-cross-process shared-memory race verification. Use the threaded equivalent for race detection and
-development/ASan runs for process integration.
+We exclude the separate-process SHM and fan-out tests because TSan tracks threads within a
+process; it does not provide cross-process shared-memory race verification. Use the
+threaded ring and sender tests for race detection and development/ASan runs for process integration.
 
 ### Why the launcher is necessary here
 
@@ -150,6 +151,20 @@ errors, malformed slots, and encoding/send failures. The send failure test uses 
 broadcast address without socket broadcast permission, so Linux rejects the send
 without transmitting a packet. Test worker threads are stopped and joined before
 reading counters or cleaning up shared memory.
+
+The parameterized sender fan-out tests compare complete UDP datagrams for 1, 2,
+and 4 destinations, including empty and maximum payloads, stable session identity,
+and shared packet sequences. Separate cases verify partial success, continuing
+past a failed destination, total send failure, and one encoding failure per event.
+
+`lle-fanout-process-test` runs the complete ingress -> Sender -> UDP -> Receiver ->
+egress path with 1, 2, and 4 child receiver processes. Sockets and rings are initialized
+before fork so all endpoints are ready when Sender starts; workers start only after
+fork. Each child independently attaches its egress consumer, checks both events,
+stops and joins its receiver, and reports success through its exit status. The
+parent reaps children before releasing resources. Each child has a 3-second receive
+deadline; CTest bounds the whole case to 10 seconds. These checks verify correctness,
+without measuring fan-out latency or simulating independently launched hosts.
 
 ## Receiver integration tests
 
