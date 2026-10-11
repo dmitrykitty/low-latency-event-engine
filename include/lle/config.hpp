@@ -17,6 +17,7 @@ struct Endpoint {
 
 struct SenderConfig {
     std::string ingress_shm_name;
+    // Nonempty numeric IPv4 endpoints, sent to in this order.
     std::vector<Endpoint> receivers;
     std::uint32_t max_datagram_bytes{static_cast<std::uint32_t>(protocol::kMaxPacketBytes)};
     std::uint32_t retransmit_window_packets{65'536};

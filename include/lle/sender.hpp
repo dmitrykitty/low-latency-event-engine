@@ -9,13 +9,14 @@
 
 #include <atomic>
 #include <expected>
+#include <vector>
 
 namespace lle {
 
 class Sender {
 public:
     // The producer must finish initializing ingress SHM before this call.
-    // This step supports BestEffort delivery to one numeric IPv4 endpoint.
+    // Prepare every numeric IPv4 destination before BestEffort sending begins.
     [[nodiscard]] static std::expected<Sender, InitError> initialize(SenderConfig config);
 
     Sender(const Sender&) = delete;
@@ -39,7 +40,7 @@ private:
         shm::SharedMemorySegment segment,
         shm::SpscRing ingress,
         transport::UdpSender udp,
-        transport::UdpAddress destination,
+        std::vector<transport::UdpAddress> destinations,
         std::uint32_t session_id
     );
 
@@ -48,7 +49,7 @@ private:
     shm::SharedMemorySegment segment_;
     shm::SpscRing ingress_;
     transport::UdpSender udp_;
-    transport::UdpAddress destination_;
+    std::vector<transport::UdpAddress> destinations_;
     std::uint32_t session_id_;
     std::uint64_t packet_sequence_{1};
     std::atomic<bool> stop_requested_{false};

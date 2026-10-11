@@ -15,19 +15,22 @@ namespace lle {
 
 //Initialize sender with correct config, otherwise return InitError
 std::expected<Sender, InitError> Sender::initialize(SenderConfig config) {
-    if (config.ingress_shm_name.empty() || config.receivers.size() != 1 ||
+    if (config.ingress_shm_name.empty() || config.receivers.empty() ||
         config.max_datagram_bytes < protocol::kMinDataPacketBytes ||
         config.max_datagram_bytes > protocol::kMaxPacketBytes ||
         config.delivery_mode != DeliveryMode::BestEffort || config.cpu != -1) {
         return std::unexpected(InitError::InvalidConfig);
     }
 
-    const auto destination = transport::UdpAddress::ipv4(
-        config.receivers.front().address,
-        config.receivers.front().port
-    );
-    if (!destination) {
-        return std::unexpected(InitError::AddressResolution);
+    // Parse and allocate once at startup, before attaching resources or sending.
+    std::vector<transport::UdpAddress> destinations;
+    destinations.reserve(config.receivers.size());
+    for (const auto& endpoint : config.receivers) {
+        const auto destination = transport::UdpAddress::ipv4(endpoint.address, endpoint.port);
+        if (!destination) {
+            return std::unexpected(InitError::AddressResolution);
+        }
+        destinations.push_back(*destination);
     }
 
     //open existing POSIX SHM
@@ -62,7 +65,7 @@ std::expected<Sender, InitError> Sender::initialize(SenderConfig config) {
         std::move(*segment),
         std::move(*ingress),
         std::move(*udp),
-        *destination,
+        std::move(destinations),
         session_id
     };
 }
@@ -72,14 +75,14 @@ Sender::Sender(
     shm::SharedMemorySegment segment,
     shm::SpscRing ingress,
     transport::UdpSender udp,
-    transport::UdpAddress destination,
+    std::vector<transport::UdpAddress> destinations,
     std::uint32_t session_id
 )
     : config_(std::move(config)),
       segment_(std::move(segment)),
       ingress_(std::move(ingress)),
       udp_(std::move(udp)),
-      destination_(destination),
+      destinations_(std::move(destinations)),
       session_id_(session_id) {}
 
 Sender::Sender(Sender&& other) noexcept
@@ -87,7 +90,7 @@ Sender::Sender(Sender&& other) noexcept
       segment_(std::move(other.segment_)),
       ingress_(std::move(other.ingress_)),
       udp_(std::move(other.udp_)),
-      destination_(other.destination_),
+      destinations_(std::move(other.destinations_)),
       session_id_(other.session_id_),
       packet_sequence_(other.packet_sequence_),
       // Moving is allowed only when no thread is running the sender.
@@ -121,18 +124,28 @@ void Sender::run() {
         ++stats_.events_in;
         const auto encoded =
             protocol::encode_data(*event, session_id_, packet_sequence_, output);
-        //release before send to free SHM slot. Do not want to wait 1 extra syscall
-        //BestEffort consumes failed events too. All payload reads finish before release.
+        // Encoding copied the payload; release SHM before sending to any destination.
+        // BestEffort consumes failed events too. All payload reads finish before release.
         static_cast<void>(ingress_.release());
         if (!encoded) {
             ++stats_.encode_errors;
             ++stats_.events_dropped;
         } else {
-            if (udp_.send_to(output.first(*encoded), destination_)) {
-                ++stats_.packets_sent;
+            const auto datagram = output.first(*encoded);
+            bool sent_to_any = false;
+            for (const auto& destination : destinations_) {
+                if (udp_.send_to(datagram, destination)) {
+                    ++stats_.packets_sent;
+                    sent_to_any = true;
+                } else {
+                    // An error for one destination must not skip the remaining ones.
+                    ++stats_.send_errors;
+                }
+            }
+            // Event counters count input events, not the number of destinations.
+            if (sent_to_any) {
                 ++stats_.events_out;
             } else {
-                ++stats_.send_errors;
                 ++stats_.events_dropped;
             }
         }

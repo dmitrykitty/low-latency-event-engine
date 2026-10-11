@@ -5,6 +5,9 @@
 namespace lle {
 
 struct EngineStats {
+    // Sender counts each input event once: events_out means at least one send
+    // succeeded; events_dropped means encoding or every destination send failed.
+    // packets_sent and send_errors count individual destination send attempts.
     std::uint64_t events_in{};
     std::uint64_t events_out{};
     std::uint64_t packets_sent{};
