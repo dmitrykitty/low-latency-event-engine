@@ -10,6 +10,9 @@ This document specifies LLE's local POSIX shared-memory SPSC queue. It is indepe
 Protocol defined in `docs/protocol.md`; LLEP packet headers, message types, packet sequences, NACKs, and network session
 IDs are not stored in shared-memory event slots.
 
+See the [data layout walkthrough](data-flow.md) to follow one event through the SHM
+slot, LLEP packet, and egress slot, with field mappings and a byte-level example.
+
 ## Requirements
 
 The queue is designed for:

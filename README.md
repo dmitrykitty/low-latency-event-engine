@@ -12,6 +12,10 @@ where payloads are copied, and when ring slots can be reused. The
 [ownership guide](docs/architecture.md#resource-and-thread-ownership) explains who
 creates and unlinks SHM and how to stop the worker threads.
 
+The [data layout walkthrough](docs/data-flow.md) shows how `EventView` becomes a
+SHM slot and then an LLEP packet, including headers, field offsets, and an example
+with exact encoded bytes.
+
 ## Command-line build
 
     cmake --preset dev

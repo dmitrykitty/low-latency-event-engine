@@ -61,6 +61,15 @@ opaque bytes.
 | Protocol helpers | Convert between event data and LLEP bytes | [encoder.cpp](../src/protocol/encoder.cpp), [decoder.cpp](../src/protocol/decoder.cpp) |
 | UDP transport | Own sockets and send/receive datagrams | [udp_sender.cpp](../src/transport/udp_sender.cpp), [udp_receiver.cpp](../src/transport/udp_receiver.cpp) |
 
+## How the data layout changes
+
+The [data representation walkthrough](data-flow.md) follows `EventView` into an
+ingress SHM slot, through LLEP encoding and decoding, and into egress SHM. It shows
+the 32-byte SHM slot header, the 16-byte DATA header, 20-byte DATA information,
+6-byte event-frame header, byte offsets, and the functions that write each part.
+The worked example compares a 64-byte SHM slot with a 48-byte LLEP packet carrying
+the same three payload bytes.
+
 ## One event from producer to consumer
 
 This is the successful path with free ring slots and a valid event. Dashed arrows

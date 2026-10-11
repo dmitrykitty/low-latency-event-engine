@@ -18,6 +18,9 @@ decoded-view hierarchy below describes the protocol model; the current API expos
 a single-event DATA view. See the [architecture guide](architecture.md) for the
 implemented sender and receiver path.
 
+The [data layout walkthrough](data-flow.md) maps application and SHM fields to LLEP
+offsets and shows how the current encoder builds a complete packet.
+
 ## Protocol properties
 
 LLEP:1.0.0 has these properties:
