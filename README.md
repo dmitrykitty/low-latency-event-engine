@@ -49,12 +49,12 @@ Implemented:
   packet accounting, explicit drops, and idle shutdown.
   See [receiver behavior and usage](docs/architecture.md#basic-receiver-loop).
 - A local producer -> sender -> receiver -> consumer integration test.
+- Packet sequencing with exact missing ranges, gap counters, and duplicate/old-packet suppression.
 
 The shared-memory ring implementation is complete under the documented single-producer/single-consumer
 and startup assumptions. The basic library data path supports one event per packet
 and one BestEffort receiver. Sender and receiver executables remain scaffolding.
-Receiver packet sequencing with gap/duplicate accounting and serial-unicast fan-out
-are the next protocol-path steps.
+Serial-unicast fan-out is the next protocol-path step.
 
 See [testing instructions](docs/testing.md) for development and sanitizer checks.
 These are correctness checks, not latency benchmarks.

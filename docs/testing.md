@@ -20,11 +20,12 @@ below.
 | Filter | Coverage | Source |
 |--------|----------|--------|
 | `lle.protocol.` | Byte helpers and single-event DATA encoding/decoding | [unit tests](../tests/unit/) |
+| `lle.reliability.gap.` | Exact missing ranges, duplicate/old packets, session isolation, and maximum sequence | [gap_detector_test.cpp](../tests/unit/gap_detector_test.cpp) |
 | `lle.shm.(segment|ring|transfer).` | SHM lifecycle, ring layout, publication, acquisition, and closure | [unit tests](../tests/unit/) |
 | `lle.shm.concurrent.` | Threaded and two-process SPSC integrity tests | [ring_concurrency_test.cpp](../tests/integration/ring_concurrency_test.cpp) |
 | `lle.transport.` | Loopback UDP, protocol round trip, truncation, and address errors | [udp_transport_test.cpp](../tests/integration/udp_transport_test.cpp) |
 | `lle.sender.` | Ingress SHM to UDP and sender failure handling | [sender_test.cpp](../tests/integration/sender_test.cpp) |
-| `lle.receiver.` | UDP to egress SHM and the complete local producer-to-consumer path | [receiver_test.cpp](../tests/integration/receiver_test.cpp) |
+| `lle.receiver.` | UDP to egress SHM, gap/duplicate/session counters, suppression of repeat delivery, and the complete local producer-to-consumer path | [receiver_test.cpp](../tests/integration/receiver_test.cpp) |
 
 These are correctness checks. Two-host full-path delivery, fan-out, recovery,
 parser fuzzing, and end-to-end latency measurements remain separate work.
@@ -162,6 +163,8 @@ Build the matching preset first. `lle-receiver-test` sends real loopback UDP DAT
 packets and consumes events through a separate egress SHM attachment. It checks
 metadata and binary payload preservation, FIFO order and slot reuse, empty/maximum
 payloads, malformed/oversized packets, full egress and small payload capacity,
+gap-range versus missing-packet counts, duplicate/old-packet suppression, foreign
+sessions, sequence tracking after an egress failure,
 closure, idle stop, move ownership, unlinking, bind failures, and invalid settings.
 It also checks the complete local producer -> sender -> receiver -> consumer path.
 All counter reads occur after stopping and joining the worker.

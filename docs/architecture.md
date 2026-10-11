@@ -125,7 +125,8 @@ releasing its egress slot.
 The original `stream_id`, event `sequence`, timestamp, and payload survive the
 encode/decode path. Sender adds a separate `session_id` and `packet_sequence` to
 the LLEP packet. These transport fields are not stored in SHM event slots. Receiver
-does not yet use them for gap detection, reordering, or duplicate suppression.
+uses them for gap detection and duplicate/old-packet suppression across all streams
+in the active session. Reordering and recovery remain later steps.
 
 ## Resource and thread ownership
 
@@ -158,14 +159,13 @@ boundary in later steps. External producers and consumers own application semant
 
 ## Later steps
 
-- receiver packet sequencing with gap and duplicate accounting;
 - serial-unicast UDP fan-out to multiple receivers;
 - opportunistic batching;
 - CPU affinity and receive-mode experiments;
 - optional NACK, retransmission history, and bounded reorder window.
 
-The diagrams above cover the implemented path. Batching, fan-out, receiver gap and
-duplicate accounting, NACKs, retransmission, and ordered recovery remain later steps.
+The diagrams above cover the implemented path. Batching, fan-out, NACKs,
+retransmission, and ordered recovery remain later steps.
 
 ## Hot-path implementation constraints
 
@@ -248,15 +248,30 @@ with the requested name is never replaced or unlinked.
 The loop uses the existing transport, decoder, and ring:
 
 ```text
-receive UDP -> decode one DATA packet -> try_publish to egress
+receive UDP -> decode one DATA packet -> check transport sequence -> try_publish to egress
 ```
 
 `run()` reuses an aligned, fixed-size packet buffer. The decoder returns a payload
 view into that buffer; `try_publish()` copies the event into SHM before the next
 receive can overwrite the buffer. Malformed, empty, truncated, and oversized
 datagrams increment `malformed_packets` and are never published. `packets_received`
-includes consumed oversized datagrams. `events_in` counts valid decoded events;
+includes consumed oversized datagrams. `events_in` counts decoded events accepted
+by the sequence check;
 `events_out` counts successful egress publications.
+
+The first valid packet pins the receiver's session for its lifetime. Packets from
+other sessions increment `wrong_session_packets` and `events_dropped`. Restart the
+receiver with a restarted sender; automatic session switching is outside this step.
+Duplicate and old packets increment `duplicate_or_old_packets` and `events_dropped`
+without being published or changing the highest accepted packet sequence.
+
+Packet sequences start at 1. `GapDetector` returns the inclusive missing range
+between the highest accepted sequence and the new packet, including a missing
+prefix before the first packet. `gaps_detected` counts ranges; `packets_missed`
+counts their total size. For packets 1, 6, 9 these counters are 2 and 6. These are
+observed gaps: a late packet is still discarded in BestEffort mode. The detector
+advances before egress publication, so an egress failure does not permit a repeat
+of the same packet to be delivered later.
 
 BestEffort drops an event when egress is full, incrementing `egress_full` and
 `events_dropped`, and continues receiving. A payload larger than the configured slot
@@ -276,8 +291,8 @@ usable after the segment name is unlinked.
 
 This step supports one event per DATA packet in BestEffort mode, with `cpu == -1`
 and `busy_poll_us == 0`. An empty listen address means `0.0.0.0`; a zero listen port
-requests an ephemeral port exposed through `local_port()`. Sequencing, duplicate/gap
-accounting, affinity, busy polling, and recovery remain separate plan steps. The
+requests an ephemeral port exposed through `local_port()`. Affinity, busy polling,
+and recovery remain separate plan steps. The
 command-line receiver is still a scaffold; the implementation is available through
 the library API.
 

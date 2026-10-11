@@ -12,7 +12,8 @@ packet. The decoder returns `DecodedDataView`, whose payload refers to the calle
 packet buffer. DATA packets containing additional event frames are rejected with
 `DecodeError::UnsupportedBatch`; non-DATA message types are rejected.
 
-Batching, NACK encoding/decoding, receiver gap and duplicate accounting,
+Receiver uses the transport sequence to detect gaps and suppress duplicate/old
+packets within one active session. Batching, NACK encoding/decoding,
 retransmission, and ordered recovery remain later implementation steps. The
 decoded-view hierarchy below describes the protocol model; the current API exposes
 a single-event DATA view. See the [architecture guide](architecture.md) for the
