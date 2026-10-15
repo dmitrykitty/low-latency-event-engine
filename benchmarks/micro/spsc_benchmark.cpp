@@ -3,10 +3,12 @@
 #include <benchmark/benchmark.h>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <exception>
 #include <immintrin.h>
 #include <iostream>
@@ -27,6 +29,7 @@ namespace util = lle_bench::util;
 
 template <template <std::size_t> class Queue, std::size_t N>
 void run_throughput(benchmark::State& state) {
+    static_assert(N >= sizeof(std::uint64_t), "payload carries the sequence number");
     constexpr std::uint64_t warmup_count = 10'000;
     constexpr std::uint64_t event_count = 1'000'000;
 
@@ -69,12 +72,21 @@ void run_throughput(benchmark::State& state) {
                 _mm_pause();
             }
 
+            // copy the whole payload out so it really moves to this core.
+            std::array<std::byte, N> sink{};
             for (std::uint64_t expected = 0; expected < warmup_count + event_count; ++expected) {
                 //if empty - try_consume -> false , wait for event in ring
                 //spin waiting for producer put event into buffer
                 while (!queue.try_consume(
                         [&](const lle::EventView& event) {
-                            if (event.sequence != expected) {
+                            std::memcpy(sink.data(), event.payload.data(),
+                                        std::min(event.payload.size(), N));
+                            benchmark::DoNotOptimize(sink);
+                            std::uint64_t payload_sequence = 0;
+                            std::memcpy(
+                                &payload_sequence, sink.data(), sizeof payload_sequence
+                            );
+                            if (event.sequence != expected || payload_sequence != expected) {
                                 correct = false;
                             }
                         }
@@ -104,6 +116,7 @@ void run_throughput(benchmark::State& state) {
         for (std::uint64_t i = 0; i < warmup_count; ++i) {
             record.sequence = i;
             record.timestamp = i * 3;
+            std::memcpy(record.payload.data(), &record.sequence, sizeof record.sequence);
             while (!queue.try_push(record)) {
                 _mm_pause();
             }
@@ -117,6 +130,7 @@ void run_throughput(benchmark::State& state) {
         for (std::uint64_t i = 0; i < event_count; ++i) {
             record.sequence = warmup_count + i;
             record.timestamp = record.sequence * 3;
+            std::memcpy(record.payload.data(), &record.sequence, sizeof record.sequence);
 
             //spin waiting until consumer free buffer
             while (!queue.try_push(record)) {
@@ -129,7 +143,7 @@ void run_throughput(benchmark::State& state) {
         state.PauseTiming();
 
         if (!correct) {
-            state.SkipWithError("consumer received invalid sequence");
+            state.SkipWithError("consumer received invalid sequence or payload");
             break;
         }
 

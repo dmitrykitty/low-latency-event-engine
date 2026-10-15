@@ -4,6 +4,8 @@ This is the canonical benchmark guide. The runner is [run.sh](../run.sh) and the
 implementation is [micro/spsc_benchmark.cpp](spsc_benchmark.cpp).
 For latency percentiles from 10M round trips per case, use the separate
 [ping-pong latency benchmark](#ping-pong-latency-benchmark-lle-spsc-latency).
+For a recorded low-noise run of both, use
+[scripts/bench/run_clean.sh](../../scripts/bench/README.md).
 
 ## Quick start: run and save all cases
 
@@ -121,14 +123,20 @@ Each throughput iteration transfers **10,000 untimed warm-up events**, followed
 by **1,000,000 measured events**. Payload sizes are
 16, 64, 256, and 1024 bytes. Each queue runs at 64, 1024, and 16384 slots:
 36 throughput cases. Another 12 cases measure RTT at fixed capacity 1024.
-The consumer checks event sequence order. Full/empty queues are retried using
+The producer writes each event's sequence number into the first 8 payload bytes.
+The consumer copies the whole payload out of the queue and checks the sequence in
+both the metadata and the payload, so payload bytes really move to the consumer
+core. (Before this change the consumer read only the sequence field, so
+large-payload throughput mostly measured producer-side copying; results from that
+version are not comparable.) Full/empty queues are retried using
 `_mm_pause()`; this is busy-waiting, not sleeping.
 
 The code is organized as follows:
 
 - `Record<N>` holds the metadata and payload used by the comparison queues.
 - `LLEQueue`, `RigtorpQueue`, and `BoostQueue` expose the same `try_push` and
-  `try_consume` interface. Consumption inspects the queued event in place.
+  `try_consume` interface. The adapter hands the consumer a view of the queued
+  event; the throughput consumer copies its payload before releasing it.
 - `run_throughput` creates the queue, starts the consumer, waits for its readiness,
   transfers the events, joins the consumer, and reports the event count.
 - `BM_LLE<N>`, `BM_Rigtorp<N>`, and `BM_Boost<N>` select throughput implementations.
@@ -330,7 +338,8 @@ For RTT, use `--benchmark_filter=^BM_LLE_RTT< --benchmark_repetitions=5` instead
 
 - Both threads are pinned, but cores are not isolated. Interrupts, preemption,
   competing workloads, and WSL host scheduling can still affect tails.
-- Validation checks sequence order, not every payload byte or metadata field.
+- Validation checks the sequence in metadata and in the first 8 payload bytes,
+  not every payload byte or metadata field.
   This benchmark does not replace correctness tests.
 - The 10,000-transfer warm-up does not touch every slot in a 16384-slot queue
   or guarantee thermal steady state.
