@@ -122,7 +122,10 @@ int read_topology_value(int cpu, std::string_view name) {
 }
 
 Topology read_topology(int cpu) {
-    return {read_topology_value(cpu, "physical_package_id"), read_topology_value(cpu, "core_id")};
+    return {
+        read_topology_value(cpu, "physical_package_id"),
+        read_topology_value(cpu, "core_id")
+    };
 }
 
 void pin_and_verify(int cpu) {
@@ -163,8 +166,7 @@ struct ClockOverhead {
 };
 
 // cost of one back-to-back timestamp pair, i.e. what each sample includes.
-template <class Read>
-ClockOverhead measure_overhead(Read read_pair) {
+template <class Read> ClockOverhead measure_overhead(Read read_pair) {
     constexpr std::size_t count = 1'000'000;
     std::vector<double> values(count);
     for (auto& value : values) {
@@ -175,7 +177,8 @@ ClockOverhead measure_overhead(Read read_pair) {
 }
 
 // nearest-rank percentile on sorted data.
-std::uint64_t percentile(const std::vector<std::uint64_t>& sorted, std::uint64_t count, double p) {
+std::uint64_t
+percentile(const std::vector<std::uint64_t>& sorted, std::uint64_t count, double p) {
     const auto rank = static_cast<std::uint64_t>(std::ceil(p * static_cast<double>(count)));
     return sorted[std::clamp<std::uint64_t>(rank, 1, count) - 1];
 }
@@ -220,8 +223,11 @@ Result run_pingpong(
             while (!requests.try_consume([&](const lle::EventView& event) {
                 response.sequence = event.sequence;
                 response.timestamp = event.source_timestamp_ns;
-                std::memcpy(response.payload.data(), event.payload.data(),
-                            std::min(event.payload.size(), N));
+                std::memcpy(
+                    response.payload.data(),
+                    event.payload.data(),
+                    std::min(event.payload.size(), N)
+                );
             })) {
                 spin(pause);
             }
@@ -283,10 +289,16 @@ Result run_pingpong(
     const auto count = options.samples;
     std::sort(ticks.begin(), ticks.begin() + static_cast<std::ptrdiff_t>(count));
     const double ns_per_tick = 1e9 / tsc_hz;
-    const auto to_ns = [&](std::uint64_t value) { return static_cast<double>(value) * ns_per_tick; };
+    const auto to_ns = [&](std::uint64_t value) {
+        return static_cast<double>(value) * ns_per_tick;
+    };
     const auto sum = std::accumulate(
-        ticks.begin(), ticks.begin() + static_cast<std::ptrdiff_t>(count), 0.0L,
-        [](long double acc, std::uint64_t value) { return acc + static_cast<long double>(value); }
+        ticks.begin(),
+        ticks.begin() + static_cast<std::ptrdiff_t>(count),
+        0.0L,
+        [](long double acc, std::uint64_t value) {
+            return acc + static_cast<long double>(value);
+        }
     );
 
     return Result{
@@ -338,11 +350,20 @@ Result run_case(
     };
     Result result;
     switch (size) {
-    case 16: result = run.template operator()<16>(); break;
-    case 64: result = run.template operator()<64>(); break;
-    case 256: result = run.template operator()<256>(); break;
-    case 1024: result = run.template operator()<1024>(); break;
-    default: throw std::runtime_error(std::format("unsupported payload size {}", size));
+    case 16:
+        result = run.template operator()<16>();
+        break;
+    case 64:
+        result = run.template operator()<64>();
+        break;
+    case 256:
+        result = run.template operator()<256>();
+        break;
+    case 1024:
+        result = run.template operator()<1024>();
+        break;
+    default:
+        throw std::runtime_error(std::format("unsupported payload size {}", size));
     }
     result.rep = rep;
     return result;
@@ -388,7 +409,8 @@ Options parse_options(int argc, char** argv) {
         const std::string_view arg{argv[i]};
         const auto eq = arg.find('=');
         const auto flag = arg.substr(0, eq);
-        const auto value = eq == std::string_view::npos ? std::string_view{} : arg.substr(eq + 1);
+        const auto value =
+            eq == std::string_view::npos ? std::string_view{} : arg.substr(eq + 1);
         if (flag == "--samples") {
             options.samples = parse_u64(value, flag);
         } else if (flag == "--warmup") {
@@ -460,23 +482,49 @@ int main(int argc, char** argv) {
             return std::chrono::duration<double, std::nano>(b - a).count();
         });
 
-        std::cout << "## SPSC ping-pong latency (round trip)\n\n"
-                  << std::format("- initiator cpu {} (package {}, core {}), echo cpu {} (package {}, core {}){}\n",
-                                 initiator_cpu, initiator_topology.package, initiator_topology.core,
-                                 echo_cpu, echo_topology.package, echo_topology.core,
-                                 same_core ? " **SMT siblings**" : "")
-                  << std::format("- compiler: {}; build: {}\n", __VERSION__, LLE_BENCH_COMPILE_INFO)
-                  << std::format("- TSC: {:.3f} MHz (calibration windows {:.3f}..{:.3f} MHz)\n",
-                                 calibration.hz / 1e6, calibration.min_hz / 1e6, calibration.max_hz / 1e6)
-                  << std::format("- timer overhead per sample (fenced rdtsc pair): min {:.1f} ns, median {:.1f} ns\n",
-                                 tsc_overhead.min_ns, tsc_overhead.median_ns)
-                  << std::format("- for reference, steady_clock::now() pair: min {:.1f} ns, median {:.1f} ns\n",
-                                 steady_overhead.min_ns, steady_overhead.median_ns)
-                  << std::format("- samples {} per case after {} warm-up round trips; reps {}; capacity {}; spin {}\n",
-                                 options.samples, options.warmup, options.reps, queue_capacity,
-                                 options.pause ? "pause" : "busy")
-                  << "- values are round-trip ns and include the timer overhead above; not halved\n\n"
-                  << std::flush;
+        std::cout
+            << "## SPSC ping-pong latency (round trip)\n\n"
+            << std::format(
+                   "- initiator cpu {} (package {}, core {}), echo cpu {} (package {}, core "
+                   "{}){}\n",
+                   initiator_cpu,
+                   initiator_topology.package,
+                   initiator_topology.core,
+                   echo_cpu,
+                   echo_topology.package,
+                   echo_topology.core,
+                   same_core ? " **SMT siblings**" : ""
+               )
+            << std::format("- compiler: {}; build: {}\n", __VERSION__, LLE_BENCH_COMPILE_INFO)
+            << std::format(
+                   "- TSC: {:.3f} MHz (calibration windows {:.3f}..{:.3f} MHz)\n",
+                   calibration.hz / 1e6,
+                   calibration.min_hz / 1e6,
+                   calibration.max_hz / 1e6
+               )
+            << std::format(
+                   "- timer overhead per sample (fenced rdtsc pair): min {:.1f} ns, median "
+                   "{:.1f} ns\n",
+                   tsc_overhead.min_ns,
+                   tsc_overhead.median_ns
+               )
+            << std::format(
+                   "- for reference, steady_clock::now() pair: min {:.1f} ns, median {:.1f} "
+                   "ns\n",
+                   steady_overhead.min_ns,
+                   steady_overhead.median_ns
+               )
+            << std::format(
+                   "- samples {} per case after {} warm-up round trips; reps {}; capacity {}; "
+                   "spin {}\n",
+                   options.samples,
+                   options.warmup,
+                   options.reps,
+                   queue_capacity,
+                   options.pause ? "pause" : "busy"
+               )
+            << "- values are round-trip ns and include the timer overhead above; not halved\n\n"
+            << std::flush;
 
         // pre-faulted once and reused so no page faults land in timed loops.
         std::vector<std::uint64_t> ticks(options.samples);
@@ -487,9 +535,17 @@ int main(int argc, char** argv) {
                 const auto offset = (static_cast<std::size_t>(rep) + s) % options.queues.size();
                 for (std::size_t q = 0; q < options.queues.size(); ++q) {
                     const auto& queue = options.queues[(q + offset) % options.queues.size()];
-                    std::cerr << std::format("running {} {}B rep {}\n", queue, options.sizes[s], rep);
-                    results.push_back(run_case(queue, options.sizes[s], options, echo_cpu,
-                                               calibration.hz, ticks, rep));
+                    std::cerr
+                        << std::format("running {} {}B rep {}\n", queue, options.sizes[s], rep);
+                    results.push_back(run_case(
+                        queue,
+                        options.sizes[s],
+                        options,
+                        echo_cpu,
+                        calibration.hz,
+                        ticks,
+                        rep
+                    ));
                 }
             }
         }
@@ -499,23 +555,49 @@ int main(int argc, char** argv) {
             return std::tuple{r.payload, qi, r.rep};
         });
 
-        std::cout << "| queue | payload B | rep | samples | min | p50 | p90 | p99 | p99.9 | p99.99 | max | mean |\n"
+        std::cout << "| queue | payload B | rep | samples | min | p50 | p90 | p99 | p99.9 | "
+                     "p99.99 | max | mean |\n"
                   << "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n";
         for (const auto& r : results) {
             std::cout << std::format(
-                "| {} | {} | {} | {} | {:.0f} | {:.0f} | {:.0f} | {:.0f} | {:.0f} | {:.0f} | {:.0f} | {:.1f} |\n",
-                r.queue, r.payload, r.rep, r.samples, r.min, r.p50, r.p90, r.p99, r.p999, r.p9999,
-                r.max, r.mean);
+                "| {} | {} | {} | {} | {:.0f} | {:.0f} | {:.0f} | {:.0f} | {:.0f} | {:.0f} | "
+                "{:.0f} | {:.1f} |\n",
+                r.queue,
+                r.payload,
+                r.rep,
+                r.samples,
+                r.min,
+                r.p50,
+                r.p90,
+                r.p99,
+                r.p999,
+                r.p9999,
+                r.max,
+                r.mean
+            );
         }
         std::cout << "\nAll latency columns are nanoseconds.\n";
 
         if (!options.csv_path.empty()) {
             std::ofstream csv{options.csv_path};
-            csv << "queue,payload_bytes,rep,samples,min_ns,p50_ns,p90_ns,p99_ns,p999_ns,p9999_ns,max_ns,mean_ns\n";
+            csv << "queue,payload_bytes,rep,samples,min_ns,p50_ns,p90_ns,p99_ns,p999_ns,p9999_"
+                   "ns,max_ns,mean_ns\n";
             for (const auto& r : results) {
-                csv << std::format("{},{},{},{},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n",
-                                   r.queue, r.payload, r.rep, r.samples, r.min, r.p50, r.p90, r.p99,
-                                   r.p999, r.p9999, r.max, r.mean);
+                csv << std::format(
+                    "{},{},{},{},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n",
+                    r.queue,
+                    r.payload,
+                    r.rep,
+                    r.samples,
+                    r.min,
+                    r.p50,
+                    r.p90,
+                    r.p99,
+                    r.p999,
+                    r.p9999,
+                    r.max,
+                    r.mean
+                );
             }
             if (!csv) {
                 throw std::runtime_error("cannot write " + options.csv_path);
