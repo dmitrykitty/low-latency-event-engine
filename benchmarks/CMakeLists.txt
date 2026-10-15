@@ -22,3 +22,11 @@ find_package(Threads REQUIRED)
 add_executable(lle-spsc-benchmark micro/spsc_benchmark.cpp)
 target_link_libraries(lle-spsc-benchmark PRIVATE lle::lle benchmark::benchmark Threads::Threads lle_project_warnings)
 target_include_directories(lle-spsc-benchmark SYSTEM PRIVATE ${rigtorp_SOURCE_DIR}/include ${boost_headers_SOURCE_DIR})
+
+# standalone ping-pong latency harness; prints its own compiler and flags for provenance.
+add_executable(lle-spsc-latency micro/spsc_latency.cpp)
+target_link_libraries(lle-spsc-latency PRIVATE lle::lle Threads::Threads lle_project_warnings)
+target_include_directories(lle-spsc-latency SYSTEM PRIVATE ${rigtorp_SOURCE_DIR}/include ${boost_headers_SOURCE_DIR})
+string(STRIP "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} ${CMAKE_BUILD_TYPE} ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}" LLE_BENCH_COMPILE_INFO)
+string(REGEX REPLACE " +" " " LLE_BENCH_COMPILE_INFO "${LLE_BENCH_COMPILE_INFO}")
+target_compile_definitions(lle-spsc-latency PRIVATE LLE_BENCH_COMPILE_INFO="${LLE_BENCH_COMPILE_INFO}")

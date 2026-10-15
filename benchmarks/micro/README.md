@@ -2,6 +2,8 @@
 
 This is the canonical benchmark guide. The runner is [run.sh](../run.sh) and the
 implementation is [micro/spsc_benchmark.cpp](spsc_benchmark.cpp).
+For latency percentiles from 10M round trips per case, use the separate
+[ping-pong latency benchmark](#ping-pong-latency-benchmark-lle-spsc-latency).
 
 ## Quick start: run and save all cases
 
@@ -338,6 +340,80 @@ For RTT, use `--benchmark_filter=^BM_LLE_RTT< --benchmark_repetitions=5` instead
   records have 24 bytes of metadata plus payload; LLE rounds its 32-byte metadata
   plus payload to 64-byte slot boundaries. Compare whole workloads, not presumed
   identical assembly operations. Join overhead is timed for throughput, not RTT.
+
+## Ping-pong latency benchmark (lle-spsc-latency)
+
+[spsc_latency.cpp](spsc_latency.cpp) is a standalone executable (no Google
+Benchmark) built by the same `LLE_BUILD_BENCHMARKS=ON` Release configuration:
+
+```sh
+cmake --build build/bench --target lle-spsc-latency -j4
+export LLE_PRODUCER_CPU=0 LLE_CONSUMER_CPU=2
+setarch "$(uname -m)" -R ./build/bench/benchmarks/lle-spsc-latency --reps=3 --csv=results/latency.csv
+```
+
+All three queues go through the same adapters in
+[queue_adapters.hpp](queue_adapters.hpp) as the throughput benchmark, with the
+same capacity (1024), payload sizes, warm-up, spin policy, and CPUs.
+
+Workload, per payload size and queue:
+
+- The initiator (main thread, `LLE_PRODUCER_CPU`) publishes a request whose first
+  8 payload bytes hold its sequence number, then spins on the response queue.
+- The echo thread (`LLE_CONSUMER_CPU`) copies the **whole payload** into its
+  response record and publishes it. The initiator copies the response payload out
+  and checks the sequence in both metadata and payload, so payload bytes really
+  cross cores in both directions. Any mismatch aborts the run.
+- One request is outstanding at a time (closed loop). Each sample is one round
+  trip: request push, echo-side consume/copy/push, and response consume/copy.
+- Defaults: 1,000,000 unmeasured warm-up round trips, then 10,000,000 measured
+  ones, per case. Queue order is rotated across sizes and repetitions.
+- Waiting is a busy spin. `--spin=pause` adds `_mm_pause()`; Intel's
+  optimization manual gives PAUSE a latency of about 140 cycles on
+  Skylake-derived cores, which adds detection delay. Use the same setting for
+  every queue.
+
+Reported: min, p50, p90, p99, p99.9, p99.99, max, and mean round-trip time in
+nanoseconds, computed from all samples of one run (nearest-rank, no
+interpolation, no pooling across repetitions). Values are **round trips**; they
+are not halved into one-way estimates.
+
+### Clock choice
+
+Samples use `rdtsc` (with `lfence` before and after) at the start and
+`rdtscp` + `lfence` at the end, both on the initiator core, so cross-core TSC
+synchronization never matters. Reasons:
+
+- The program prints the measured cost of a back-to-back timestamp pair for both
+  fenced rdtsc and `steady_clock::now()`. On Linux `steady_clock` is a vDSO
+  `clock_gettime` that itself reads the TSC plus conversion arithmetic, so it is
+  strictly more work per sample.
+- Fences stop the out-of-order core from moving the timestamp into or out of the
+  timed region, which matters at a few hundred nanoseconds.
+- Ticks are stored raw and converted once at the end, so the timed loop has no
+  floating-point work.
+
+The TSC frequency is calibrated at startup against `steady_clock` over seven
+100 ms busy-waited windows; the median is used and the min/max window estimates
+are printed. The program refuses to run without `constant_tsc` and `nonstop_tsc`
+(invariant TSC), and refuses two SMT siblings of one physical core unless
+`--allow-smt-siblings` is given. Every sample includes one timer-pair overhead;
+it is printed, not subtracted.
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--samples=N` | 10000000 | measured round trips per case |
+| `--warmup=N` | 1000000 | unmeasured round trips per case |
+| `--reps=N` | 1 | repetitions of every case |
+| `--sizes=…` | `16,64,256,1024` | payload sizes (only these four are compiled) |
+| `--queues=…` | `lle,rigtorp,boost` | queues to run |
+| `--spin=busy\|pause` | `busy` | wait loop |
+| `--csv=PATH` | none | also write CSV |
+| `--allow-smt-siblings` | off | allow both CPUs on one physical core |
+
+Limitations: threads share one process, so this is not cross-process SHM
+latency; it is closed-loop, so it says nothing about queueing under sustained
+load; and cores are not isolated unless you configured that yourself.
 
 ## Future system benchmark methodology
 
