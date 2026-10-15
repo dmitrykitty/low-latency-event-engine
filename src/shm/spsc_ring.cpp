@@ -186,36 +186,38 @@ PublishResult SpscRing::try_publish(const EventView& event) noexcept {
     if (header_ == nullptr) {
         return PublishResult::Closed;
     }
-    const auto& preamble = header_->preamble;
-    const auto state = preamble.state.load(std::memory_order::acquire);
+    const auto state = header_->preamble.state.load(std::memory_order::acquire);
 
     if (state != static_cast<std::uint32_t>(RingState::Ready)) {
         return PublishResult::Closed;
     }
 
-    if (event.payload.size() > preamble.slot_payload_capacity) {
+    if (event.payload.size() > slot_payload_capacity_) {
         return PublishResult::PayloadTooLarge;
     }
 
     auto& write_cursor = header_->producer;
-    auto& read_cursor = header_->consumer;
     // only the producer writes this cursor, so its own load can be relaxed.
     const auto write_pos = write_cursor.position.load(std::memory_order::relaxed);
-    // acquire the consumer's release before reusing its slot.
-    const auto read_pos = read_cursor.position.load(std::memory_order::acquire);
 
     if (write_pos == std::numeric_limits<std::uint64_t>::max()) {
         return PublishResult::Closed;
     }
-    if (read_pos > write_pos || write_pos - read_pos > preamble.slot_count) {
-        return PublishResult::Closed;
-    }
-    if (write_pos - read_pos == preamble.slot_count) {
-        return PublishResult::Full;
+    // touch the consumer's cache line only when the cached cursor says the ring is full.
+    if (write_pos - cached_read_position_ >= slot_count_) {
+        // acquire the consumer's release before reusing its slot.
+        cached_read_position_ = header_->consumer.position.load(std::memory_order::acquire);
+        if (cached_read_position_ > write_pos ||
+            write_pos - cached_read_position_ > slot_count_) {
+            return PublishResult::Closed;
+        }
+        if (write_pos - cached_read_position_ == slot_count_) {
+            return PublishResult::Full;
+        }
     }
 
-    const auto write_idx = write_pos & (preamble.slot_count - 1);
-    auto* slot = slots_ + preamble.slot_stride * write_idx;
+    const auto write_idx = write_pos & (slot_count_ - 1);
+    auto* slot = slots_ + static_cast<std::size_t>(slot_stride_) * write_idx;
     auto* header = reinterpret_cast<RingSlotHeader*>(slot);
 
     fill_slot_header(header, event);
@@ -237,28 +239,30 @@ std::expected<EventView, AcquireError> SpscRing::try_acquire() noexcept {
         return std::unexpected(AcquireError::AlreadyAcquired);
     }
 
-    // read closure before the write cursor so the final publication cannot be missed.
-    const auto state = header_->preamble.state.load(std::memory_order_acquire);
     // only the consumer advances its read cursor.
     const auto read_pos = header_->consumer.position.load(std::memory_order_relaxed);
-    // acquire the producer's published slot contents before reading them.
-    const auto write_pos = header_->producer.position.load(std::memory_order_acquire);
-    if (read_pos == write_pos) {
-        return std::unexpected(
-            state == static_cast<std::uint32_t>(RingState::Closed) ? AcquireError::Closed
-                                                                   : AcquireError::Empty
-        );
+    // events below the cached write cursor were already acquired, so skip the producer's line.
+    if (read_pos >= cached_write_position_) {
+        // read closure before the write cursor so the final publication cannot be missed.
+        const auto state = header_->preamble.state.load(std::memory_order_acquire);
+        // acquire the producer's published slot contents before reading them.
+        cached_write_position_ = header_->producer.position.load(std::memory_order_acquire);
+        if (read_pos == cached_write_position_) {
+            return std::unexpected(
+                state == static_cast<std::uint32_t>(RingState::Closed) ? AcquireError::Closed
+                                                                       : AcquireError::Empty
+            );
+        }
     }
 
-    const auto& preamble = header_->preamble;
-    if (read_pos > write_pos || write_pos - read_pos > preamble.slot_count) {
+    if (read_pos > cached_write_position_ || cached_write_position_ - read_pos > slot_count_) {
         return std::unexpected(AcquireError::InvalidSlot);
     }
 
-    const auto index = read_pos & (preamble.slot_count - 1);
-    const auto* slot = slots_ + index * preamble.slot_stride;
+    const auto index = read_pos & (slot_count_ - 1);
+    const auto* slot = slots_ + index * slot_stride_;
     const auto* slot_header = reinterpret_cast<const RingSlotHeader*>(slot);
-    if (invalid_slot(*slot_header, preamble.slot_payload_capacity)) {
+    if (invalid_slot(*slot_header, slot_payload_capacity_)) {
         return std::unexpected(AcquireError::InvalidSlot);
     }
 
@@ -301,6 +305,11 @@ bool SpscRing::close_publication() noexcept {
 SpscRing::SpscRing(SpscRing&& other) noexcept
     : header_(std::exchange(other.header_, nullptr)),
       slots_(std::exchange(other.slots_, nullptr)),
+      slot_count_(std::exchange(other.slot_count_, 0)),
+      slot_stride_(std::exchange(other.slot_stride_, 0)),
+      slot_payload_capacity_(std::exchange(other.slot_payload_capacity_, 0)),
+      cached_read_position_(std::exchange(other.cached_read_position_, 0)),
+      cached_write_position_(std::exchange(other.cached_write_position_, 0)),
       acquired_position_(std::exchange(other.acquired_position_, 0)),
       acquired_(std::exchange(other.acquired_, false)),
       initializer_(std::exchange(other.initializer_, false)) {}
@@ -308,6 +317,10 @@ SpscRing::SpscRing(SpscRing&& other) noexcept
 SpscRing::SpscRing(RingHeader* header, std::byte* slots, bool initializer) noexcept
     : header_(header),
       slots_(slots),
+      // initialize() and attach() validated these before constructing the handle.
+      slot_count_(header->preamble.slot_count),
+      slot_stride_(header->preamble.slot_stride),
+      slot_payload_capacity_(header->preamble.slot_payload_capacity),
       initializer_(initializer) {}
 
 } // namespace lle::shm

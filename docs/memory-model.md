@@ -204,14 +204,23 @@ Shared memory contains no pointers, `std::span`, `std::size_t`, compiler-depende
 The producer performs one bounded attempt:
 
 1. relaxed-load its locally owned `write_position`;
-2. acquire-load `read_position`;
-3. return `Full` if the queue is full;
+2. if its handle-local copy of `read_position` says the queue is full, acquire-load
+   `read_position` and refresh the copy;
+3. return `Full` if the queue is still full;
 4. validate the event before changing the selected slot;
 5. write event metadata;
 6. copy payload directly into slot storage;
 7. release-store `write_position + 1`.
 
 The release-store publishes all preceding slot writes.
+
+The cached `read_position` is only ever an older value of a monotonically increasing
+cursor, so it underestimates free space and can never permit overwriting an unread slot.
+It was obtained by an acquire-load, so every slot below it has already been released by
+the consumer. In the common not-full case the producer therefore never reads the
+consumer's cache line, which removes one cross-core cache-line transfer per publication.
+Slot count, stride, and payload capacity are copied into the handle when it is created
+and are not reread from shared memory on the hot path.
 
 Publication results are:
 
@@ -229,19 +238,24 @@ publication API.
 
 The consumer:
 
-Before loading the cursors, the implementation acquire-loads the segment state. Observing `CLOSED`
-therefore orders the subsequent write-cursor load after the final publication. If the cursor comparison
-shows empty, return `Closed` when that state was observed, otherwise return `Empty` and allow retry.
-
 1. relaxed-loads its locally owned `read_position`;
-2. acquire-loads `write_position`;
-3. reports empty if both positions are equal;
+2. if its handle-local copy of `write_position` shows no unread events, acquire-loads the
+   segment state and then `write_position`, refreshing the copy;
+3. reports empty if both positions are still equal;
 4. reads metadata and exposes a non-owning view into the slot;
 5. finishes all use of the view;
 6. release-stores `read_position + 1`.
 
-The acquire-load of `write_position` makes the producer's slot writes visible. The release-store to `read_position`
-informs the producer that the slot may be reused.
+The acquire-load of `write_position` makes the producer's slot writes visible; slots below
+the cached copy were made visible by the earlier acquire-load that produced it. The
+release-store to `read_position` informs the producer that the slot may be reused.
+
+The state is loaded only on that refresh path, and before the write cursor. Observing
+`CLOSED` therefore orders the subsequent write-cursor load after the final publication.
+If the refreshed comparison shows empty, return `Closed` when that state was observed,
+otherwise return `Empty` and allow retry. Events already known to be queued are returned
+without checking the state, which matches the rule that queued events remain readable
+after closure.
 
 A view remains valid until its slot is released. A consumer API must not advance `read_position` before its caller has
 finished reading or encoding the payload. This can be expressed with an explicit lease/release API or equivalent

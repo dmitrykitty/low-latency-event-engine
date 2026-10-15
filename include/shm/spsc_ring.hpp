@@ -74,6 +74,13 @@ class SpscRing {
 
     RingHeader* header_{nullptr};
     std::byte* slots_{nullptr};
+    // geometry is validated once and copied so the hot path never rereads shared metadata.
+    std::uint32_t slot_count_{0};
+    std::uint32_t slot_stride_{0};
+    std::uint32_t slot_payload_capacity_{0};
+    // last observed peer cursor; a stale value is a conservative lower bound.
+    std::uint64_t cached_read_position_{0};  // producer side
+    std::uint64_t cached_write_position_{0}; // consumer side
     std::uint64_t acquired_position_{0};
     bool acquired_{false};
     bool initializer_{false};
