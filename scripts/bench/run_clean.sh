@@ -65,9 +65,18 @@ cpu_in_list() { # cpu, kernel cpu list like "2,4" or "2-5"
     return 1
 }
 read_or() { cat "$1" 2>/dev/null || echo "$2"; }
+# per-CPU sysfs values of online CPUs only; offline SMT siblings fail reads with EBUSY.
+online_values() { # path below cpuN/, e.g. cpufreq/scaling_governor
+    local dir
+    for dir in "$cpu_root"/cpu[0-9]*; do
+        if [[ ! -e $dir/online || $(cat "$dir/online") == 1 ]]; then
+            cat "$dir/$1" 2>/dev/null || true
+        fi
+    done
+}
 both_in() { cpu_in_list "$producer" "$1" && cpu_in_list "$consumer" "$1"; }
 
-governors="$(cat "$cpu_root"/cpu*/cpufreq/scaling_governor 2>/dev/null | sort -u | xargs)"
+governors="$(online_values cpufreq/scaling_governor | sort -u | xargs)"
 check "cpufreq governor" "performance" "$governors" "$([[ $governors == performance ]] && echo 1 || echo 0)"
 no_turbo="$(read_or "$cpu_root/intel_pstate/no_turbo" n/a)"
 check "turbo" "off (no_turbo=1)" "no_turbo=$no_turbo" "$([[ $no_turbo == 1 ]] && echo 1 || echo 0)"
@@ -109,7 +118,7 @@ compiler="$(grep -m1 '^CMAKE_CXX_COMPILER:' "$build_dir/CMakeCache.txt" | cut -d
     echo "latency: reps=$latency_reps samples=$latency_samples warmup=$latency_warmup"
     echo "throughput: reps=$throughput_reps min_time=$throughput_min_time"
     echo "online_cpus: $(cat "$cpu_root/online")"
-    echo "epp: $(cat "$cpu_root"/cpu*/cpufreq/energy_performance_preference 2>/dev/null | sort -u | xargs)"
+    echo "epp: $(online_values cpufreq/energy_performance_preference | sort -u | xargs)"
     echo "loadavg_before: $(cat /proc/loadavg)"
     echo
     echo "## lscpu"
@@ -131,7 +140,7 @@ irq_total() { # cpu
         col && $col ~ /^[0-9]+$/ { sum += $col } END { print sum + 0 }' /proc/interrupts
 }
 throttle_total() {
-    cat "$cpu_root"/cpu*/thermal_throttle/core_throttle_count 2>/dev/null | awk '{ s += $1 } END { print s + 0 }'
+    online_values thermal_throttle/core_throttle_count | awk '{ s += $1 } END { print s + 0 }'
 }
 pkg_temp() {
     local zone
