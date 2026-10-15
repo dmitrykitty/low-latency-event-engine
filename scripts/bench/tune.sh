@@ -29,15 +29,30 @@ require_root() {
     fi
 }
 
+# offline CPUs (e.g. SMT siblings after "smt off") keep their cpufreq files,
+# but reading or writing them fails with EBUSY, so only touch online CPUs.
+online_cpu_dirs() {
+    local dir
+    for dir in "$cpu_root"/cpu[0-9]*; do
+        if [[ ! -e $dir/online || $(cat "$dir/online") == 1 ]]; then
+            echo "$dir"
+        fi
+    done
+}
+
 set_governor() {
-    for file in "$cpu_root"/cpu*/cpufreq/scaling_governor; do
-        echo "$1" > "$file"
+    local dir
+    for dir in $(online_cpu_dirs); do
+        echo "$1" > "$dir/cpufreq/scaling_governor"
     done
 }
 
 set_epp() {
-    for file in "$cpu_root"/cpu*/cpufreq/energy_performance_preference; do
-        if [[ -e $file ]]; then echo "$1" > "$file"; fi
+    local dir
+    for dir in $(online_cpu_dirs); do
+        if [[ -e $dir/cpufreq/energy_performance_preference ]]; then
+            echo "$1" > "$dir/cpufreq/energy_performance_preference"
+        fi
     done
 }
 
