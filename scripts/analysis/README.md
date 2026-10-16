@@ -13,3 +13,11 @@ It reads `latency_runs.csv` and `throughput_runs.csv` and writes `latency-p50`,
 dark variant (`<name>-light.svg`, `<name>-dark.svg`). Latency charts show every
 process as a dot plus the mean and its 95% confidence interval; the throughput
 chart shows the mean and interval per queue and payload size.
+
+[draw_ring_layout.py](draw_ring_layout.py) draws the SPSC ring's shared-memory
+layout with its 128-byte prefetch pairs for
+[docs/memory-model.md](../../docs/memory-model.md):
+
+```sh
+python3 scripts/analysis/draw_ring_layout.py figures
+```

@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="470" viewBox="0 0 920 470" font-family='system-ui, -apple-system, "Segoe UI", sans-serif' role="img">
+<title>SPSC ring layout in shared memory and its 128-byte prefetch pairs</title>
+<rect width="920" height="470" rx="8" fill="#1a1a19"/>
+<text x="24.0" y="32.0" font-size="15" fill="#f0efec" text-anchor="start" font-weight="600">SPSC ring layout in shared memory</text>
+<text x="24.0" y="52.0" font-size="12" fill="#c3c2b7" text-anchor="start" font-weight="400">Each box is one 64-byte cache line. Brackets mark the 128-byte line pairs that Intel&#x27;s L2 spatial prefetcher fetches together.</text>
+<rect x="24" y="68" width="12" height="12" rx="3" fill="#3987e5" fill-opacity="1.0"/>
+<text x="42.0" y="78.0" font-size="12" fill="#c3c2b7" text-anchor="start" font-weight="400">producer core writes on every event</text>
+<rect x="274.5" y="68" width="12" height="12" rx="3" fill="#d95926" fill-opacity="1.0"/>
+<text x="292.5" y="78.0" font-size="12" fill="#c3c2b7" text-anchor="start" font-weight="400">consumer core writes on every event</text>
+<rect x="525.0" y="68" width="12" height="12" rx="3" fill="#3987e5" fill-opacity="0.16"/>
+<text x="543.0" y="78.0" font-size="12" fill="#c3c2b7" text-anchor="start" font-weight="400">slot data: producer writes, consumer reads</text>
+<text x="24.0" y="118.0" font-size="13" fill="#f0efec" text-anchor="start" font-weight="600">Ring memory on a 128-byte boundary (required)</text>
+<text x="24.0" y="136.0" font-size="12" fill="#c3c2b7" text-anchor="start" font-weight="400">The two cursors fall into different pairs, so neither core&#x27;s prefetches pull in the other core&#x27;s hot line.</text>
+<text x="150.0" y="162.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400">+0</text>
+<rect x="150.0" y="170" width="118" height="44" rx="4" fill="#2c2c2a" fill-opacity="1.0"/>
+<text x="158.0" y="189" font-size="12" fill="#f0efec" font-weight="600">preamble</text>
+<text x="158.0" y="205" font-size="11" fill="#f0efec" opacity="0.85">geometry, state</text>
+<text x="270.0" y="162.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400">+64</text>
+<rect x="270.0" y="170" width="118" height="44" rx="4" fill="#3987e5" fill-opacity="1.0"/>
+<text x="278.0" y="189" font-size="12" fill="#ffffff" font-weight="600">producer cursor</text>
+<text x="278.0" y="205" font-size="11" fill="#ffffff" opacity="0.85">write_position</text>
+<text x="390.0" y="162.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400">+128</text>
+<rect x="390.0" y="170" width="118" height="44" rx="4" fill="#d95926" fill-opacity="1.0"/>
+<text x="398.0" y="189" font-size="12" fill="#ffffff" font-weight="600">consumer cursor</text>
+<text x="398.0" y="205" font-size="11" fill="#ffffff" opacity="0.85">read_position</text>
+<text x="510.0" y="162.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400">+192</text>
+<rect x="510.0" y="170" width="118" height="44" rx="4" fill="#3987e5" fill-opacity="0.16"/>
+<text x="518.0" y="189" font-size="12" fill="#f0efec" font-weight="600">slot 0</text>
+<text x="518.0" y="205" font-size="11" fill="#f0efec" opacity="0.85">producer writes</text>
+<text x="630.0" y="162.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400">+256</text>
+<rect x="630.0" y="170" width="118" height="44" rx="4" fill="#3987e5" fill-opacity="0.16"/>
+<text x="638.0" y="189" font-size="12" fill="#f0efec" font-weight="600">slot 1</text>
+<text x="750.0" y="162.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400">+320</text>
+<rect x="750.0" y="170" width="118" height="44" rx="4" fill="#3987e5" fill-opacity="0.16"/>
+<text x="758.0" y="189" font-size="12" fill="#f0efec" font-weight="600">slot 2</text>
+<text x="876.0" y="197.0" font-size="14" fill="#898781" text-anchor="start" font-weight="400">…</text>
+<path d="M152.0,228 v8 H386.0 v-8" fill="none" stroke="#383835" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="269.0" y="254.0" font-size="12" fill="#c3c2b7" text-anchor="middle" font-weight="400">✓ only the producer writes here</text>
+<path d="M392.0,228 v8 H626.0 v-8" fill="none" stroke="#383835" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="509.0" y="254.0" font-size="12" fill="#c3c2b7" text-anchor="middle" font-weight="400">✓ slot 0 is written once per lap</text>
+<path d="M632.0,228 v8 H866.0 v-8" fill="none" stroke="#383835" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="24.0" y="296.0" font-size="13" fill="#f0efec" text-anchor="start" font-weight="600">Ring memory at 64 modulo 128 (rejected by initialize() and attach())</text>
+<text x="24.0" y="314.0" font-size="12" fill="#c3c2b7" text-anchor="start" font-weight="400">Both cursors fall into one pair. Measured: p50 round trip 7-22% higher than on a 128-byte boundary (16 B to 1 KB).</text>
+<text x="150.0" y="340.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400">+0</text>
+<rect x="150.0" y="348" width="118" height="44" rx="4" fill="#2c2c2a" fill-opacity="1.0"/>
+<text x="158.0" y="367" font-size="12" fill="#f0efec" font-weight="600">preamble</text>
+<text x="158.0" y="383" font-size="11" fill="#f0efec" opacity="0.85">geometry, state</text>
+<text x="270.0" y="340.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400">+64</text>
+<rect x="270.0" y="348" width="118" height="44" rx="4" fill="#3987e5" fill-opacity="1.0"/>
+<text x="278.0" y="367" font-size="12" fill="#ffffff" font-weight="600">producer cursor</text>
+<text x="278.0" y="383" font-size="11" fill="#ffffff" opacity="0.85">write_position</text>
+<text x="390.0" y="340.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400">+128</text>
+<rect x="390.0" y="348" width="118" height="44" rx="4" fill="#d95926" fill-opacity="1.0"/>
+<text x="398.0" y="367" font-size="12" fill="#ffffff" font-weight="600">consumer cursor</text>
+<text x="398.0" y="383" font-size="11" fill="#ffffff" opacity="0.85">read_position</text>
+<text x="510.0" y="340.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400">+192</text>
+<rect x="510.0" y="348" width="118" height="44" rx="4" fill="#3987e5" fill-opacity="0.16"/>
+<text x="518.0" y="367" font-size="12" fill="#f0efec" font-weight="600">slot 0</text>
+<text x="518.0" y="383" font-size="11" fill="#f0efec" opacity="0.85">producer writes</text>
+<text x="630.0" y="340.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400">+256</text>
+<rect x="630.0" y="348" width="118" height="44" rx="4" fill="#3987e5" fill-opacity="0.16"/>
+<text x="638.0" y="367" font-size="12" fill="#f0efec" font-weight="600">slot 1</text>
+<text x="750.0" y="340.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400">+320</text>
+<rect x="750.0" y="348" width="118" height="44" rx="4" fill="#3987e5" fill-opacity="0.16"/>
+<text x="758.0" y="367" font-size="12" fill="#f0efec" font-weight="600">slot 2</text>
+<text x="876.0" y="375.0" font-size="14" fill="#898781" text-anchor="start" font-weight="400">…</text>
+<path d="M93.0,406 v8 H266.0 v-8" fill="none" stroke="#383835" stroke-width="1.5" stroke-linejoin="round"/>
+<path d="M272.0,406 v8 H506.0 v-8" fill="none" stroke="#f0efec" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="389.0" y="432.0" font-size="12" fill="#f0efec" text-anchor="middle" font-weight="600">✕ one pair, written by both cores on every event</text>
+<path d="M512.0,406 v8 H746.0 v-8" fill="none" stroke="#383835" stroke-width="1.5" stroke-linejoin="round"/>
+<path d="M752.0,406 v8 H866.0 v-8" fill="none" stroke="#383835" stroke-width="1.5" stroke-linejoin="round"/>
+</svg>
