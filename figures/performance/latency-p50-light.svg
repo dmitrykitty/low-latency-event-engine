@@ -1,0 +1,512 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="464" viewBox="0 0 920 464" font-family='system-ui, -apple-system, "Segoe UI", sans-serif' role="img">
+<title>Ping-pong round-trip latency, p50</title>
+<rect width="920" height="464" rx="8" fill="#fcfcfb"/>
+<text x="24.0" y="32.0" font-size="15" fill="#0b0b0b" text-anchor="start" font-weight="600">Ping-pong round-trip latency, p50 (ns, lower is better)</text>
+<text x="24.0" y="52.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">Each small dot is one process with a random memory layout (32 per queue); large dot = mean, whisker = 95% confidence interval.</text>
+<circle cx="29.0" cy="72.0" r="5" fill="#2a78d6"/>
+<text x="39.0" y="76.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">LLE</text>
+<circle cx="77.5" cy="72.0" r="5" fill="#eb6834"/>
+<text x="87.5" y="76.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">rigtorp</text>
+<circle cx="156.0" cy="72.0" r="5" fill="#1baf7a"/>
+<text x="166.0" y="76.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">Boost</text>
+<text x="24.0" y="106.0" font-size="12" fill="#0b0b0b" text-anchor="start" font-weight="600">16 B payload</text>
+<line x1="98.0" y1="116.0" x2="98.0" y2="228.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="98.0" y="243.0" font-size="11" fill="#898781" text-anchor="middle" font-weight="400">280</text>
+<line x1="150.0" y1="116.0" x2="150.0" y2="228.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="150.0" y="243.0" font-size="11" fill="#898781" text-anchor="middle" font-weight="400">300</text>
+<line x1="202.0" y1="116.0" x2="202.0" y2="228.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="202.0" y="243.0" font-size="11" fill="#898781" text-anchor="middle" font-weight="400">320</text>
+<line x1="254.0" y1="116.0" x2="254.0" y2="228.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="254.0" y="243.0" font-size="11" fill="#898781" text-anchor="middle" font-weight="400">340</text>
+<line x1="306.0" y1="116.0" x2="306.0" y2="228.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="306.0" y="243.0" font-size="11" fill="#898781" text-anchor="middle" font-weight="400">360</text>
+<line x1="358.0" y1="116.0" x2="358.0" y2="228.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="358.0" y="243.0" font-size="11" fill="#898781" text-anchor="middle" font-weight="400">380</text>
+<line x1="98.0" y1="228.0" x2="358.0" y2="228.0" stroke="#c3c2b7" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="90.0" y="143.0" font-size="12" fill="#52514e" text-anchor="end" font-weight="400">LLE</text>
+<circle cx="154.4" cy="131.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p00: 302 ns</title></circle>
+<circle cx="158.4" cy="142.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p01: 303 ns</title></circle>
+<circle cx="170.5" cy="135.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p02: 308 ns</title></circle>
+<circle cx="146.4" cy="147.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p03: 299 ns</title></circle>
+<circle cx="172.5" cy="140.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p04: 309 ns</title></circle>
+<circle cx="170.5" cy="134.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p05: 308 ns</title></circle>
+<circle cx="164.5" cy="145.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p06: 306 ns</title></circle>
+<circle cx="162.4" cy="139.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p07: 305 ns</title></circle>
+<circle cx="146.4" cy="132.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p08: 299 ns</title></circle>
+<circle cx="140.4" cy="143.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p09: 296 ns</title></circle>
+<circle cx="158.4" cy="137.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p10: 303 ns</title></circle>
+<circle cx="166.5" cy="131.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p11: 306 ns</title></circle>
+<circle cx="176.5" cy="142.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p12: 310 ns</title></circle>
+<circle cx="162.4" cy="135.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p13: 305 ns</title></circle>
+<circle cx="164.5" cy="147.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p14: 306 ns</title></circle>
+<circle cx="168.5" cy="140.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p15: 307 ns</title></circle>
+<circle cx="148.4" cy="134.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p16: 299 ns</title></circle>
+<circle cx="166.5" cy="145.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p17: 306 ns</title></circle>
+<circle cx="168.5" cy="139.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p18: 307 ns</title></circle>
+<circle cx="140.4" cy="132.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p19: 296 ns</title></circle>
+<circle cx="172.5" cy="143.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p20: 309 ns</title></circle>
+<circle cx="174.5" cy="137.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p21: 309 ns</title></circle>
+<circle cx="168.5" cy="131.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p22: 307 ns</title></circle>
+<circle cx="164.5" cy="142.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p23: 306 ns</title></circle>
+<circle cx="142.4" cy="135.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p24: 297 ns</title></circle>
+<circle cx="158.4" cy="147.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p25: 303 ns</title></circle>
+<circle cx="152.4" cy="140.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p26: 301 ns</title></circle>
+<circle cx="154.4" cy="134.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p27: 302 ns</title></circle>
+<circle cx="170.5" cy="145.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p28: 308 ns</title></circle>
+<circle cx="154.4" cy="139.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p29: 302 ns</title></circle>
+<circle cx="170.5" cy="132.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p30: 308 ns</title></circle>
+<circle cx="144.4" cy="143.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 16 B, process p31: 298 ns</title></circle>
+<line x1="156.6" y1="139.0" x2="164.3" y2="139.0" stroke="#2a78d6" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="156.6" y1="134.0" x2="156.6" y2="144.0" stroke="#2a78d6" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="164.3" y1="134.0" x2="164.3" y2="144.0" stroke="#2a78d6" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<circle cx="160.4" cy="139.0" r="6.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>LLE 16 B: mean 304 ± 1 ns</title></circle>
+<text x="370.0" y="143.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">304 ± 1</text>
+<text x="90.0" y="177.0" font-size="12" fill="#52514e" text-anchor="end" font-weight="400">rigtorp</text>
+<circle cx="182.5" cy="165.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p00: 312 ns</title></circle>
+<circle cx="270.8" cy="176.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p01: 346 ns</title></circle>
+<circle cx="160.4" cy="169.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p02: 304 ns</title></circle>
+<circle cx="244.7" cy="181.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p03: 336 ns</title></circle>
+<circle cx="282.8" cy="174.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p04: 351 ns</title></circle>
+<circle cx="160.4" cy="168.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p05: 304 ns</title></circle>
+<circle cx="186.5" cy="179.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p06: 314 ns</title></circle>
+<circle cx="254.7" cy="173.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p07: 340 ns</title></circle>
+<circle cx="180.5" cy="166.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p08: 312 ns</title></circle>
+<circle cx="264.8" cy="177.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p09: 344 ns</title></circle>
+<circle cx="238.7" cy="171.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p10: 334 ns</title></circle>
+<circle cx="238.7" cy="165.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p11: 334 ns</title></circle>
+<circle cx="286.8" cy="176.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p12: 353 ns</title></circle>
+<circle cx="286.8" cy="169.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p13: 353 ns</title></circle>
+<circle cx="320.9" cy="181.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p14: 366 ns</title></circle>
+<circle cx="274.8" cy="174.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p15: 348 ns</title></circle>
+<circle cx="264.8" cy="168.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p16: 344 ns</title></circle>
+<circle cx="180.5" cy="179.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p17: 312 ns</title></circle>
+<circle cx="162.4" cy="173.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p18: 305 ns</title></circle>
+<circle cx="168.5" cy="166.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p19: 307 ns</title></circle>
+<circle cx="260.7" cy="177.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p20: 343 ns</title></circle>
+<circle cx="170.5" cy="171.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p21: 308 ns</title></circle>
+<circle cx="144.4" cy="165.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p22: 298 ns</title></circle>
+<circle cx="154.4" cy="176.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p23: 302 ns</title></circle>
+<circle cx="254.7" cy="169.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p24: 340 ns</title></circle>
+<circle cx="314.9" cy="181.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p25: 363 ns</title></circle>
+<circle cx="266.8" cy="174.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p26: 345 ns</title></circle>
+<circle cx="206.6" cy="168.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p27: 322 ns</title></circle>
+<circle cx="130.3" cy="179.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p28: 292 ns</title></circle>
+<circle cx="172.5" cy="173.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p29: 309 ns</title></circle>
+<circle cx="296.8" cy="166.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p30: 356 ns</title></circle>
+<circle cx="150.4" cy="177.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 16 B, process p31: 300 ns</title></circle>
+<line x1="202.3" y1="173.0" x2="243.6" y2="173.0" stroke="#eb6834" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="202.3" y1="168.0" x2="202.3" y2="178.0" stroke="#eb6834" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="243.6" y1="168.0" x2="243.6" y2="178.0" stroke="#eb6834" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<circle cx="222.9" cy="173.0" r="6.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"><title>rigtorp 16 B: mean 328 ± 8 ns</title></circle>
+<text x="370.0" y="177.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">328 ± 8</text>
+<text x="90.0" y="211.0" font-size="12" fill="#52514e" text-anchor="end" font-weight="400">Boost</text>
+<circle cx="286.8" cy="199.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p00: 353 ns</title></circle>
+<circle cx="274.8" cy="210.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p01: 348 ns</title></circle>
+<circle cx="302.9" cy="203.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p02: 359 ns</title></circle>
+<circle cx="308.9" cy="215.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p03: 361 ns</title></circle>
+<circle cx="312.9" cy="208.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p04: 363 ns</title></circle>
+<circle cx="270.8" cy="202.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p05: 346 ns</title></circle>
+<circle cx="300.9" cy="213.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p06: 358 ns</title></circle>
+<circle cx="272.8" cy="207.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p07: 347 ns</title></circle>
+<circle cx="290.8" cy="200.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p08: 354 ns</title></circle>
+<circle cx="327.0" cy="211.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p09: 368 ns</title></circle>
+<circle cx="294.8" cy="205.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p10: 356 ns</title></circle>
+<circle cx="276.8" cy="199.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p11: 349 ns</title></circle>
+<circle cx="286.8" cy="210.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p12: 353 ns</title></circle>
+<circle cx="286.8" cy="203.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p13: 353 ns</title></circle>
+<circle cx="298.9" cy="215.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p14: 357 ns</title></circle>
+<circle cx="280.8" cy="208.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p15: 350 ns</title></circle>
+<circle cx="262.7" cy="202.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p16: 343 ns</title></circle>
+<circle cx="302.9" cy="213.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p17: 359 ns</title></circle>
+<circle cx="296.8" cy="207.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p18: 356 ns</title></circle>
+<circle cx="280.8" cy="200.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p19: 350 ns</title></circle>
+<circle cx="312.9" cy="211.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p20: 363 ns</title></circle>
+<circle cx="290.8" cy="205.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p21: 354 ns</title></circle>
+<circle cx="266.8" cy="199.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p22: 345 ns</title></circle>
+<circle cx="262.7" cy="210.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p23: 343 ns</title></circle>
+<circle cx="294.8" cy="203.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p24: 356 ns</title></circle>
+<circle cx="274.8" cy="215.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p25: 348 ns</title></circle>
+<circle cx="286.8" cy="208.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p26: 353 ns</title></circle>
+<circle cx="290.8" cy="202.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p27: 354 ns</title></circle>
+<circle cx="284.8" cy="213.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p28: 352 ns</title></circle>
+<circle cx="280.8" cy="207.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p29: 350 ns</title></circle>
+<circle cx="266.8" cy="200.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p30: 345 ns</title></circle>
+<circle cx="282.8" cy="211.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 16 B, process p31: 351 ns</title></circle>
+<line x1="282.3" y1="207.0" x2="293.5" y2="207.0" stroke="#1baf7a" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="282.3" y1="202.0" x2="282.3" y2="212.0" stroke="#1baf7a" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="293.5" y1="202.0" x2="293.5" y2="212.0" stroke="#1baf7a" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<circle cx="287.9" cy="207.0" r="6.5" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"><title>Boost 16 B: mean 353 ± 2 ns</title></circle>
+<text x="370.0" y="211.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">353 ± 2</text>
+<text x="472.0" y="106.0" font-size="12" fill="#0b0b0b" text-anchor="start" font-weight="600">64 B payload</text>
+<line x1="546.0" y1="116.0" x2="546.0" y2="228.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="546.0" y="243.0" font-size="11" fill="#898781" text-anchor="middle" font-weight="400">350</text>
+<line x1="632.7" y1="116.0" x2="632.7" y2="228.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="632.7" y="243.0" font-size="11" fill="#898781" text-anchor="middle" font-weight="400">400</text>
+<line x1="719.3" y1="116.0" x2="719.3" y2="228.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="719.3" y="243.0" font-size="11" fill="#898781" text-anchor="middle" font-weight="400">450</text>
+<line x1="806.0" y1="116.0" x2="806.0" y2="228.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="806.0" y="243.0" font-size="11" fill="#898781" text-anchor="middle" font-weight="400">500</text>
+<line x1="546.0" y1="228.0" x2="806.0" y2="228.0" stroke="#c3c2b7" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="538.0" y="143.0" font-size="12" fill="#52514e" text-anchor="end" font-weight="400">LLE</text>
+<circle cx="588.0" cy="131.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p00: 374 ns</title></circle>
+<circle cx="580.0" cy="142.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p01: 370 ns</title></circle>
+<circle cx="574.6" cy="135.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p02: 367 ns</title></circle>
+<circle cx="576.0" cy="147.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p03: 367 ns</title></circle>
+<circle cx="576.0" cy="140.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p04: 367 ns</title></circle>
+<circle cx="573.3" cy="134.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p05: 366 ns</title></circle>
+<circle cx="586.7" cy="145.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p06: 373 ns</title></circle>
+<circle cx="573.3" cy="139.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p07: 366 ns</title></circle>
+<circle cx="562.6" cy="132.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p08: 360 ns</title></circle>
+<circle cx="586.7" cy="143.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p09: 373 ns</title></circle>
+<circle cx="589.3" cy="137.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p10: 375 ns</title></circle>
+<circle cx="563.9" cy="131.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p11: 360 ns</title></circle>
+<circle cx="574.6" cy="142.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p12: 367 ns</title></circle>
+<circle cx="558.6" cy="135.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p13: 357 ns</title></circle>
+<circle cx="577.3" cy="147.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p14: 368 ns</title></circle>
+<circle cx="585.3" cy="140.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p15: 373 ns</title></circle>
+<circle cx="570.6" cy="134.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p16: 364 ns</title></circle>
+<circle cx="574.6" cy="145.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p17: 367 ns</title></circle>
+<circle cx="574.6" cy="139.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p18: 367 ns</title></circle>
+<circle cx="573.3" cy="132.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p19: 366 ns</title></circle>
+<circle cx="576.0" cy="143.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p20: 367 ns</title></circle>
+<circle cx="559.9" cy="137.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p21: 358 ns</title></circle>
+<circle cx="558.6" cy="131.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p22: 357 ns</title></circle>
+<circle cx="555.9" cy="142.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p23: 356 ns</title></circle>
+<circle cx="571.9" cy="135.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p24: 365 ns</title></circle>
+<circle cx="565.3" cy="147.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p25: 361 ns</title></circle>
+<circle cx="561.3" cy="140.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p26: 359 ns</title></circle>
+<circle cx="577.3" cy="134.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p27: 368 ns</title></circle>
+<circle cx="566.6" cy="145.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p28: 362 ns</title></circle>
+<circle cx="578.6" cy="139.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p29: 369 ns</title></circle>
+<circle cx="571.9" cy="132.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p30: 365 ns</title></circle>
+<circle cx="584.0" cy="143.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 64 B, process p31: 372 ns</title></circle>
+<line x1="570.0" y1="139.0" x2="576.6" y2="139.0" stroke="#2a78d6" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="570.0" y1="134.0" x2="570.0" y2="144.0" stroke="#2a78d6" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="576.6" y1="134.0" x2="576.6" y2="144.0" stroke="#2a78d6" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<circle cx="573.3" cy="139.0" r="6.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>LLE 64 B: mean 366 ± 2 ns</title></circle>
+<text x="818.0" y="143.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">366 ± 2</text>
+<text x="538.0" y="177.0" font-size="12" fill="#52514e" text-anchor="end" font-weight="400">rigtorp</text>
+<circle cx="696.3" cy="165.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p00: 437 ns</title></circle>
+<circle cx="570.6" cy="176.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p01: 364 ns</title></circle>
+<circle cx="700.3" cy="169.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p02: 439 ns</title></circle>
+<circle cx="578.6" cy="181.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p03: 369 ns</title></circle>
+<circle cx="676.3" cy="174.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p04: 425 ns</title></circle>
+<circle cx="546.5" cy="168.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p05: 350 ns</title></circle>
+<circle cx="684.3" cy="179.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p06: 430 ns</title></circle>
+<circle cx="697.7" cy="173.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p07: 438 ns</title></circle>
+<circle cx="551.9" cy="166.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p08: 353 ns</title></circle>
+<circle cx="550.5" cy="177.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p09: 353 ns</title></circle>
+<circle cx="688.3" cy="171.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p10: 432 ns</title></circle>
+<circle cx="666.9" cy="165.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p11: 420 ns</title></circle>
+<circle cx="621.4" cy="176.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p12: 394 ns</title></circle>
+<circle cx="588.0" cy="169.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p13: 374 ns</title></circle>
+<circle cx="577.3" cy="181.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p14: 368 ns</title></circle>
+<circle cx="549.2" cy="174.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p15: 352 ns</title></circle>
+<circle cx="606.7" cy="168.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p16: 385 ns</title></circle>
+<circle cx="680.3" cy="179.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p17: 427 ns</title></circle>
+<circle cx="689.6" cy="173.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p18: 433 ns</title></circle>
+<circle cx="580.0" cy="166.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p19: 370 ns</title></circle>
+<circle cx="692.3" cy="177.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p20: 434 ns</title></circle>
+<circle cx="739.1" cy="171.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p21: 461 ns</title></circle>
+<circle cx="689.6" cy="165.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p22: 433 ns</title></circle>
+<circle cx="672.3" cy="176.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p23: 423 ns</title></circle>
+<circle cx="555.9" cy="169.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p24: 356 ns</title></circle>
+<circle cx="674.9" cy="181.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p25: 424 ns</title></circle>
+<circle cx="578.6" cy="174.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p26: 369 ns</title></circle>
+<circle cx="700.3" cy="168.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p27: 439 ns</title></circle>
+<circle cx="570.6" cy="179.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p28: 364 ns</title></circle>
+<circle cx="576.0" cy="173.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p29: 367 ns</title></circle>
+<circle cx="571.9" cy="166.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p30: 365 ns</title></circle>
+<circle cx="695.0" cy="177.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 64 B, process p31: 436 ns</title></circle>
+<line x1="609.4" y1="173.0" x2="654.2" y2="173.0" stroke="#eb6834" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="609.4" y1="168.0" x2="609.4" y2="178.0" stroke="#eb6834" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="654.2" y1="168.0" x2="654.2" y2="178.0" stroke="#eb6834" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<circle cx="631.8" cy="173.0" r="6.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"><title>rigtorp 64 B: mean 399 ± 13 ns</title></circle>
+<text x="818.0" y="177.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">399 ± 13</text>
+<text x="538.0" y="211.0" font-size="12" fill="#52514e" text-anchor="end" font-weight="400">Boost</text>
+<circle cx="650.8" cy="199.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p00: 410 ns</title></circle>
+<circle cx="668.2" cy="210.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p01: 421 ns</title></circle>
+<circle cx="658.9" cy="203.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p02: 415 ns</title></circle>
+<circle cx="654.9" cy="215.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p03: 413 ns</title></circle>
+<circle cx="646.8" cy="208.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p04: 408 ns</title></circle>
+<circle cx="653.5" cy="202.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p05: 412 ns</title></circle>
+<circle cx="617.4" cy="213.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p06: 391 ns</title></circle>
+<circle cx="626.8" cy="207.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p07: 397 ns</title></circle>
+<circle cx="620.1" cy="200.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p08: 393 ns</title></circle>
+<circle cx="658.9" cy="211.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p09: 415 ns</title></circle>
+<circle cx="638.8" cy="205.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p10: 404 ns</title></circle>
+<circle cx="648.2" cy="199.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p11: 409 ns</title></circle>
+<circle cx="634.8" cy="210.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p12: 401 ns</title></circle>
+<circle cx="654.9" cy="203.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p13: 413 ns</title></circle>
+<circle cx="648.2" cy="215.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p14: 409 ns</title></circle>
+<circle cx="665.6" cy="208.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p15: 419 ns</title></circle>
+<circle cx="661.6" cy="202.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p16: 417 ns</title></circle>
+<circle cx="638.8" cy="213.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p17: 404 ns</title></circle>
+<circle cx="650.8" cy="207.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p18: 410 ns</title></circle>
+<circle cx="637.5" cy="200.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p19: 403 ns</title></circle>
+<circle cx="662.9" cy="211.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p20: 417 ns</title></circle>
+<circle cx="660.2" cy="205.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p21: 416 ns</title></circle>
+<circle cx="629.5" cy="199.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p22: 398 ns</title></circle>
+<circle cx="638.8" cy="210.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p23: 404 ns</title></circle>
+<circle cx="650.8" cy="203.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p24: 410 ns</title></circle>
+<circle cx="653.5" cy="215.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p25: 412 ns</title></circle>
+<circle cx="648.2" cy="208.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p26: 409 ns</title></circle>
+<circle cx="630.8" cy="202.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p27: 399 ns</title></circle>
+<circle cx="666.9" cy="213.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p28: 420 ns</title></circle>
+<circle cx="634.8" cy="207.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p29: 401 ns</title></circle>
+<circle cx="633.5" cy="200.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p30: 400 ns</title></circle>
+<circle cx="658.9" cy="211.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 64 B, process p31: 415 ns</title></circle>
+<line x1="642.1" y1="207.0" x2="652.0" y2="207.0" stroke="#1baf7a" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="642.1" y1="202.0" x2="642.1" y2="212.0" stroke="#1baf7a" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="652.0" y1="202.0" x2="652.0" y2="212.0" stroke="#1baf7a" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<circle cx="647.0" cy="207.0" r="6.5" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"><title>Boost 64 B: mean 408 ± 3 ns</title></circle>
+<text x="818.0" y="211.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">408 ± 3</text>
+<text x="24.0" y="274.0" font-size="12" fill="#0b0b0b" text-anchor="start" font-weight="600">256 B payload</text>
+<line x1="98.0" y1="284.0" x2="98.0" y2="396.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="98.0" y="411.0" font-size="11" fill="#898781" text-anchor="middle" font-weight="400">500</text>
+<line x1="184.7" y1="284.0" x2="184.7" y2="396.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="184.7" y="411.0" font-size="11" fill="#898781" text-anchor="middle" font-weight="400">550</text>
+<line x1="271.3" y1="284.0" x2="271.3" y2="396.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="271.3" y="411.0" font-size="11" fill="#898781" text-anchor="middle" font-weight="400">600</text>
+<line x1="358.0" y1="284.0" x2="358.0" y2="396.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="358.0" y="411.0" font-size="11" fill="#898781" text-anchor="middle" font-weight="400">650</text>
+<line x1="98.0" y1="396.0" x2="358.0" y2="396.0" stroke="#c3c2b7" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="90.0" y="311.0" font-size="12" fill="#52514e" text-anchor="end" font-weight="400">LLE</text>
+<circle cx="155.5" cy="299.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p00: 533 ns</title></circle>
+<circle cx="156.8" cy="310.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p01: 534 ns</title></circle>
+<circle cx="136.8" cy="303.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p02: 522 ns</title></circle>
+<circle cx="151.5" cy="315.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p03: 531 ns</title></circle>
+<circle cx="142.1" cy="308.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p04: 525 ns</title></circle>
+<circle cx="148.8" cy="302.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p05: 529 ns</title></circle>
+<circle cx="148.8" cy="313.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p06: 529 ns</title></circle>
+<circle cx="139.5" cy="307.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p07: 524 ns</title></circle>
+<circle cx="148.8" cy="300.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p08: 529 ns</title></circle>
+<circle cx="144.8" cy="311.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p09: 527 ns</title></circle>
+<circle cx="147.5" cy="305.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p10: 529 ns</title></circle>
+<circle cx="156.8" cy="299.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p11: 534 ns</title></circle>
+<circle cx="146.2" cy="310.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p12: 528 ns</title></circle>
+<circle cx="132.8" cy="303.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p13: 520 ns</title></circle>
+<circle cx="132.8" cy="315.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p14: 520 ns</title></circle>
+<circle cx="147.5" cy="308.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p15: 529 ns</title></circle>
+<circle cx="158.2" cy="302.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p16: 535 ns</title></circle>
+<circle cx="135.4" cy="313.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p17: 522 ns</title></circle>
+<circle cx="144.8" cy="307.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p18: 527 ns</title></circle>
+<circle cx="148.8" cy="300.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p19: 529 ns</title></circle>
+<circle cx="146.2" cy="311.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p20: 528 ns</title></circle>
+<circle cx="142.1" cy="305.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p21: 525 ns</title></circle>
+<circle cx="142.1" cy="299.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p22: 525 ns</title></circle>
+<circle cx="139.5" cy="310.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p23: 524 ns</title></circle>
+<circle cx="151.5" cy="303.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p24: 531 ns</title></circle>
+<circle cx="135.4" cy="315.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p25: 522 ns</title></circle>
+<circle cx="159.5" cy="308.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p26: 535 ns</title></circle>
+<circle cx="142.1" cy="302.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p27: 525 ns</title></circle>
+<circle cx="148.8" cy="313.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p28: 529 ns</title></circle>
+<circle cx="144.8" cy="307.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p29: 527 ns</title></circle>
+<circle cx="144.8" cy="300.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p30: 527 ns</title></circle>
+<circle cx="132.8" cy="311.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 256 B, process p31: 520 ns</title></circle>
+<line x1="142.7" y1="307.0" x2="148.1" y2="307.0" stroke="#2a78d6" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="142.7" y1="302.0" x2="142.7" y2="312.0" stroke="#2a78d6" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="148.1" y1="302.0" x2="148.1" y2="312.0" stroke="#2a78d6" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<circle cx="145.4" cy="307.0" r="6.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>LLE 256 B: mean 527 ± 2 ns</title></circle>
+<text x="370.0" y="311.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">527 ± 2</text>
+<text x="90.0" y="345.0" font-size="12" fill="#52514e" text-anchor="end" font-weight="400">rigtorp</text>
+<circle cx="277.2" cy="333.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p00: 603 ns</title></circle>
+<circle cx="277.2" cy="344.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p01: 603 ns</title></circle>
+<circle cx="164.9" cy="337.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p02: 539 ns</title></circle>
+<circle cx="251.8" cy="349.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p03: 589 ns</title></circle>
+<circle cx="184.9" cy="342.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p04: 550 ns</title></circle>
+<circle cx="151.5" cy="336.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p05: 531 ns</title></circle>
+<circle cx="277.2" cy="347.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p06: 603 ns</title></circle>
+<circle cx="166.2" cy="341.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p07: 539 ns</title></circle>
+<circle cx="282.6" cy="334.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p08: 606 ns</title></circle>
+<circle cx="258.5" cy="345.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p09: 593 ns</title></circle>
+<circle cx="152.8" cy="339.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p10: 532 ns</title></circle>
+<circle cx="269.2" cy="333.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p11: 599 ns</title></circle>
+<circle cx="254.5" cy="344.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p12: 590 ns</title></circle>
+<circle cx="262.5" cy="337.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p13: 595 ns</title></circle>
+<circle cx="142.1" cy="349.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p14: 525 ns</title></circle>
+<circle cx="164.9" cy="342.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p15: 539 ns</title></circle>
+<circle cx="144.8" cy="336.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p16: 527 ns</title></circle>
+<circle cx="156.8" cy="347.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p17: 534 ns</title></circle>
+<circle cx="144.8" cy="341.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p18: 527 ns</title></circle>
+<circle cx="254.5" cy="334.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p19: 590 ns</title></circle>
+<circle cx="158.2" cy="345.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p20: 535 ns</title></circle>
+<circle cx="267.8" cy="339.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p21: 598 ns</title></circle>
+<circle cx="273.2" cy="333.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p22: 601 ns</title></circle>
+<circle cx="261.2" cy="344.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p23: 594 ns</title></circle>
+<circle cx="313.3" cy="337.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p24: 624 ns</title></circle>
+<circle cx="159.5" cy="349.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p25: 535 ns</title></circle>
+<circle cx="155.5" cy="342.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p26: 533 ns</title></circle>
+<circle cx="273.2" cy="336.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p27: 601 ns</title></circle>
+<circle cx="270.5" cy="347.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p28: 600 ns</title></circle>
+<circle cx="159.5" cy="341.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p29: 535 ns</title></circle>
+<circle cx="259.8" cy="334.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p30: 593 ns</title></circle>
+<circle cx="190.3" cy="345.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 256 B, process p31: 553 ns</title></circle>
+<line x1="197.5" y1="341.0" x2="238.9" y2="341.0" stroke="#eb6834" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="197.5" y1="336.0" x2="197.5" y2="346.0" stroke="#eb6834" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="238.9" y1="336.0" x2="238.9" y2="346.0" stroke="#eb6834" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<circle cx="218.2" cy="341.0" r="6.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"><title>rigtorp 256 B: mean 569 ± 12 ns</title></circle>
+<text x="370.0" y="345.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">569 ± 12</text>
+<text x="90.0" y="379.0" font-size="12" fill="#52514e" text-anchor="end" font-weight="400">Boost</text>
+<circle cx="247.8" cy="367.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p00: 586 ns</title></circle>
+<circle cx="237.1" cy="378.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p01: 580 ns</title></circle>
+<circle cx="245.1" cy="371.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p02: 585 ns</title></circle>
+<circle cx="229.1" cy="383.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p03: 576 ns</title></circle>
+<circle cx="211.7" cy="376.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p04: 566 ns</title></circle>
+<circle cx="230.4" cy="370.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p05: 576 ns</title></circle>
+<circle cx="231.7" cy="381.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p06: 577 ns</title></circle>
+<circle cx="247.8" cy="375.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p07: 586 ns</title></circle>
+<circle cx="239.8" cy="368.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p08: 582 ns</title></circle>
+<circle cx="221.0" cy="379.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p09: 571 ns</title></circle>
+<circle cx="237.1" cy="373.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p10: 580 ns</title></circle>
+<circle cx="242.4" cy="367.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p11: 583 ns</title></circle>
+<circle cx="227.7" cy="378.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p12: 575 ns</title></circle>
+<circle cx="243.8" cy="371.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p13: 584 ns</title></circle>
+<circle cx="235.7" cy="383.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p14: 579 ns</title></circle>
+<circle cx="229.1" cy="376.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p15: 576 ns</title></circle>
+<circle cx="235.7" cy="370.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p16: 579 ns</title></circle>
+<circle cx="225.1" cy="381.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p17: 573 ns</title></circle>
+<circle cx="243.8" cy="375.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p18: 584 ns</title></circle>
+<circle cx="227.7" cy="368.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p19: 575 ns</title></circle>
+<circle cx="253.2" cy="379.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p20: 590 ns</title></circle>
+<circle cx="217.0" cy="373.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p21: 569 ns</title></circle>
+<circle cx="230.4" cy="367.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p22: 576 ns</title></circle>
+<circle cx="225.1" cy="378.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p23: 573 ns</title></circle>
+<circle cx="239.8" cy="371.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p24: 582 ns</title></circle>
+<circle cx="225.1" cy="383.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p25: 573 ns</title></circle>
+<circle cx="217.0" cy="376.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p26: 569 ns</title></circle>
+<circle cx="241.1" cy="370.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p27: 583 ns</title></circle>
+<circle cx="245.1" cy="381.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p28: 585 ns</title></circle>
+<circle cx="234.4" cy="375.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p29: 579 ns</title></circle>
+<circle cx="221.0" cy="368.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p30: 571 ns</title></circle>
+<circle cx="246.5" cy="379.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 256 B, process p31: 586 ns</title></circle>
+<line x1="230.2" y1="375.0" x2="237.7" y2="375.0" stroke="#1baf7a" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="230.2" y1="370.0" x2="230.2" y2="380.0" stroke="#1baf7a" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="237.7" y1="370.0" x2="237.7" y2="380.0" stroke="#1baf7a" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<circle cx="233.9" cy="375.0" r="6.5" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"><title>Boost 256 B: mean 578 ± 2 ns</title></circle>
+<text x="370.0" y="379.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">578 ± 2</text>
+<text x="472.0" y="274.0" font-size="12" fill="#0b0b0b" text-anchor="start" font-weight="600">1024 B payload</text>
+<line x1="546.0" y1="284.0" x2="546.0" y2="396.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="546.0" y="411.0" font-size="11" fill="#898781" text-anchor="middle" font-weight="400">800</text>
+<line x1="632.7" y1="284.0" x2="632.7" y2="396.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="632.7" y="411.0" font-size="11" fill="#898781" text-anchor="middle" font-weight="400">850</text>
+<line x1="719.3" y1="284.0" x2="719.3" y2="396.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="719.3" y="411.0" font-size="11" fill="#898781" text-anchor="middle" font-weight="400">900</text>
+<line x1="806.0" y1="284.0" x2="806.0" y2="396.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="806.0" y="411.0" font-size="11" fill="#898781" text-anchor="middle" font-weight="400">950</text>
+<line x1="546.0" y1="396.0" x2="806.0" y2="396.0" stroke="#c3c2b7" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="538.0" y="311.0" font-size="12" fill="#52514e" text-anchor="end" font-weight="400">LLE</text>
+<circle cx="701.4" cy="299.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p00: 890 ns</title></circle>
+<circle cx="712.1" cy="310.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p01: 896 ns</title></circle>
+<circle cx="704.1" cy="303.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p02: 891 ns</title></circle>
+<circle cx="697.4" cy="315.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p03: 887 ns</title></circle>
+<circle cx="706.8" cy="308.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p04: 893 ns</title></circle>
+<circle cx="708.1" cy="302.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p05: 894 ns</title></circle>
+<circle cx="713.4" cy="313.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p06: 897 ns</title></circle>
+<circle cx="708.1" cy="307.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p07: 894 ns</title></circle>
+<circle cx="701.4" cy="300.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p08: 890 ns</title></circle>
+<circle cx="705.4" cy="311.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p09: 892 ns</title></circle>
+<circle cx="700.1" cy="305.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p10: 889 ns</title></circle>
+<circle cx="698.7" cy="299.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p11: 888 ns</title></circle>
+<circle cx="708.1" cy="310.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p12: 894 ns</title></circle>
+<circle cx="708.1" cy="303.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p13: 894 ns</title></circle>
+<circle cx="705.4" cy="315.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p14: 892 ns</title></circle>
+<circle cx="713.4" cy="308.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p15: 897 ns</title></circle>
+<circle cx="724.2" cy="302.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p16: 903 ns</title></circle>
+<circle cx="702.7" cy="313.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p17: 890 ns</title></circle>
+<circle cx="718.8" cy="307.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p18: 900 ns</title></circle>
+<circle cx="712.1" cy="300.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p19: 896 ns</title></circle>
+<circle cx="706.8" cy="311.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p20: 893 ns</title></circle>
+<circle cx="716.1" cy="305.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p21: 898 ns</title></circle>
+<circle cx="722.8" cy="299.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p22: 902 ns</title></circle>
+<circle cx="696.1" cy="310.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p23: 887 ns</title></circle>
+<circle cx="701.4" cy="303.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p24: 890 ns</title></circle>
+<circle cx="710.8" cy="315.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p25: 895 ns</title></circle>
+<circle cx="689.4" cy="308.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p26: 883 ns</title></circle>
+<circle cx="701.4" cy="302.2" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p27: 890 ns</title></circle>
+<circle cx="702.7" cy="313.4" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p28: 890 ns</title></circle>
+<circle cx="708.1" cy="307.0" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p29: 894 ns</title></circle>
+<circle cx="704.1" cy="300.6" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p30: 891 ns</title></circle>
+<circle cx="717.5" cy="311.8" r="4" fill="#2a78d6" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>LLE 1024 B, process p31: 899 ns</title></circle>
+<line x1="704.3" y1="307.0" x2="709.9" y2="307.0" stroke="#2a78d6" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="704.3" y1="302.0" x2="704.3" y2="312.0" stroke="#2a78d6" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="709.9" y1="302.0" x2="709.9" y2="312.0" stroke="#2a78d6" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<circle cx="707.1" cy="307.0" r="6.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>LLE 1024 B: mean 893 ± 2 ns</title></circle>
+<text x="818.0" y="311.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">893 ± 2</text>
+<text x="538.0" y="345.0" font-size="12" fill="#52514e" text-anchor="end" font-weight="400">rigtorp</text>
+<circle cx="611.8" cy="333.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p00: 838 ns</title></circle>
+<circle cx="625.2" cy="344.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p01: 846 ns</title></circle>
+<circle cx="738.9" cy="337.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p02: 911 ns</title></circle>
+<circle cx="626.5" cy="349.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p03: 846 ns</title></circle>
+<circle cx="764.3" cy="342.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p04: 926 ns</title></circle>
+<circle cx="619.8" cy="336.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p05: 843 ns</title></circle>
+<circle cx="630.5" cy="347.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p06: 849 ns</title></circle>
+<circle cx="764.3" cy="341.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p07: 926 ns</title></circle>
+<circle cx="638.5" cy="334.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p08: 853 ns</title></circle>
+<circle cx="793.7" cy="345.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p09: 943 ns</title></circle>
+<circle cx="605.1" cy="339.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p10: 834 ns</title></circle>
+<circle cx="752.2" cy="333.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p11: 919 ns</title></circle>
+<circle cx="643.9" cy="344.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p12: 856 ns</title></circle>
+<circle cx="627.8" cy="337.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p13: 847 ns</title></circle>
+<circle cx="748.2" cy="349.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p14: 917 ns</title></circle>
+<circle cx="736.2" cy="342.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p15: 910 ns</title></circle>
+<circle cx="726.8" cy="336.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p16: 904 ns</title></circle>
+<circle cx="602.4" cy="347.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p17: 833 ns</title></circle>
+<circle cx="738.9" cy="341.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p18: 911 ns</title></circle>
+<circle cx="758.9" cy="334.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p19: 923 ns</title></circle>
+<circle cx="635.9" cy="345.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p20: 852 ns</title></circle>
+<circle cx="754.9" cy="339.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p21: 921 ns</title></circle>
+<circle cx="744.2" cy="333.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p22: 914 ns</title></circle>
+<circle cx="732.2" cy="344.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p23: 907 ns</title></circle>
+<circle cx="729.5" cy="337.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p24: 906 ns</title></circle>
+<circle cx="626.5" cy="349.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p25: 846 ns</title></circle>
+<circle cx="741.5" cy="342.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p26: 913 ns</title></circle>
+<circle cx="630.5" cy="336.2" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p27: 849 ns</title></circle>
+<circle cx="642.6" cy="347.4" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p28: 856 ns</title></circle>
+<circle cx="625.2" cy="341.0" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p29: 846 ns</title></circle>
+<circle cx="736.2" cy="334.6" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p30: 910 ns</title></circle>
+<circle cx="630.5" cy="345.8" r="4" fill="#eb6834" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>rigtorp 1024 B, process p31: 849 ns</title></circle>
+<line x1="664.2" y1="341.0" x2="709.8" y2="341.0" stroke="#eb6834" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="664.2" y1="336.0" x2="664.2" y2="346.0" stroke="#eb6834" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="709.8" y1="336.0" x2="709.8" y2="346.0" stroke="#eb6834" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<circle cx="687.0" cy="341.0" r="6.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"><title>rigtorp 1024 B: mean 881 ± 13 ns</title></circle>
+<text x="818.0" y="345.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">881 ± 13</text>
+<text x="538.0" y="379.0" font-size="12" fill="#52514e" text-anchor="end" font-weight="400">Boost</text>
+<circle cx="698.7" cy="367.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p00: 888 ns</title></circle>
+<circle cx="701.4" cy="378.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p01: 890 ns</title></circle>
+<circle cx="728.2" cy="371.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p02: 905 ns</title></circle>
+<circle cx="709.4" cy="383.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p03: 894 ns</title></circle>
+<circle cx="692.1" cy="376.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p04: 884 ns</title></circle>
+<circle cx="706.8" cy="370.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p05: 893 ns</title></circle>
+<circle cx="696.1" cy="381.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p06: 887 ns</title></circle>
+<circle cx="700.1" cy="375.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p07: 889 ns</title></circle>
+<circle cx="701.4" cy="368.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p08: 890 ns</title></circle>
+<circle cx="696.1" cy="379.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p09: 887 ns</title></circle>
+<circle cx="697.4" cy="373.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p10: 887 ns</title></circle>
+<circle cx="706.8" cy="367.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p11: 893 ns</title></circle>
+<circle cx="693.4" cy="378.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p12: 885 ns</title></circle>
+<circle cx="710.8" cy="371.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p13: 895 ns</title></circle>
+<circle cx="709.4" cy="383.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p14: 894 ns</title></circle>
+<circle cx="634.5" cy="376.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p15: 851 ns</title></circle>
+<circle cx="706.8" cy="370.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p16: 893 ns</title></circle>
+<circle cx="713.4" cy="381.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p17: 897 ns</title></circle>
+<circle cx="700.1" cy="375.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p18: 889 ns</title></circle>
+<circle cx="685.4" cy="368.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p19: 880 ns</title></circle>
+<circle cx="698.7" cy="379.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p20: 888 ns</title></circle>
+<circle cx="698.7" cy="373.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p21: 888 ns</title></circle>
+<circle cx="694.7" cy="367.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p22: 886 ns</title></circle>
+<circle cx="712.1" cy="378.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p23: 896 ns</title></circle>
+<circle cx="712.1" cy="371.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p24: 896 ns</title></circle>
+<circle cx="688.0" cy="383.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p25: 882 ns</title></circle>
+<circle cx="717.5" cy="376.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p26: 899 ns</title></circle>
+<circle cx="706.8" cy="370.2" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p27: 893 ns</title></circle>
+<circle cx="690.7" cy="381.4" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p28: 883 ns</title></circle>
+<circle cx="714.8" cy="375.0" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p29: 897 ns</title></circle>
+<circle cx="701.4" cy="368.6" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p30: 890 ns</title></circle>
+<circle cx="701.4" cy="379.8" r="4" fill="#1baf7a" fill-opacity="0.35" stroke="#fcfcfb" stroke-width="1"><title>Boost 1024 B, process p31: 890 ns</title></circle>
+<line x1="695.3" y1="375.0" x2="706.3" y2="375.0" stroke="#1baf7a" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="695.3" y1="370.0" x2="695.3" y2="380.0" stroke="#1baf7a" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<line x1="706.3" y1="370.0" x2="706.3" y2="380.0" stroke="#1baf7a" stroke-width="2" stroke-linecap="round" opacity="1"/>
+<circle cx="700.8" cy="375.0" r="6.5" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"><title>Boost 1024 B: mean 889 ± 3 ns</title></circle>
+<text x="818.0" y="379.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">889 ± 3</text>
+</svg>

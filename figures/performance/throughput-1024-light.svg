@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="420" viewBox="0 0 920 420" font-family='system-ui, -apple-system, "Segoe UI", sans-serif' role="img">
+<title>Throughput, 1024-slot queue</title>
+<rect width="920" height="420" rx="8" fill="#fcfcfb"/>
+<text x="24.0" y="32.0" font-size="15" fill="#0b0b0b" text-anchor="start" font-weight="600">Throughput, 1024-slot queue (million events/s, higher is better)</text>
+<text x="24.0" y="52.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">Mean of 10 processes with random memory layouts; whisker = 95% confidence interval. The consumer copies every payload.</text>
+<circle cx="29.0" cy="72.0" r="5" fill="#2a78d6"/>
+<text x="39.0" y="76.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">LLE</text>
+<circle cx="77.5" cy="72.0" r="5" fill="#eb6834"/>
+<text x="87.5" y="76.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">rigtorp</text>
+<circle cx="156.0" cy="72.0" r="5" fill="#1baf7a"/>
+<text x="166.0" y="76.0" font-size="12" fill="#52514e" text-anchor="start" font-weight="400">Boost</text>
+<line x1="84.0" y1="364.0" x2="896.0" y2="364.0" stroke="#c3c2b7" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="74.0" y="368.0" font-size="11" fill="#898781" text-anchor="end" font-weight="400">0</text>
+<line x1="84.0" y1="312.0" x2="896.0" y2="312.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="74.0" y="316.0" font-size="11" fill="#898781" text-anchor="end" font-weight="400">25</text>
+<line x1="84.0" y1="260.0" x2="896.0" y2="260.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="74.0" y="264.0" font-size="11" fill="#898781" text-anchor="end" font-weight="400">50</text>
+<line x1="84.0" y1="208.0" x2="896.0" y2="208.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="74.0" y="212.0" font-size="11" fill="#898781" text-anchor="end" font-weight="400">75</text>
+<line x1="84.0" y1="156.0" x2="896.0" y2="156.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="74.0" y="160.0" font-size="11" fill="#898781" text-anchor="end" font-weight="400">100</text>
+<line x1="84.0" y1="104.0" x2="896.0" y2="104.0" stroke="#e1e0d9" stroke-width="1" stroke-linecap="round" opacity="1"/>
+<text x="74.0" y="108.0" font-size="11" fill="#898781" text-anchor="end" font-weight="400">125</text>
+<text x="185.5" y="386.0" font-size="12" fill="#52514e" text-anchor="middle" font-weight="400">16 B</text>
+<path d="M147.5,364.0 V168.2 Q147.5,164.2 151.5,164.2 H167.5 Q171.5,164.2 171.5,168.2 V364.0 Z" fill="#2a78d6"><title>LLE 16 B: 96.04 ± 5.78 M events/s</title></path>
+<line x1="159.5" y1="152.2" x2="159.5" y2="176.3" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="155.5" y1="152.2" x2="163.5" y2="152.2" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="155.5" y1="176.3" x2="163.5" y2="176.3" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<text x="159.5" y="144.2" font-size="12" fill="#0b0b0b" text-anchor="middle" font-weight="600">96.0</text>
+<path d="M173.5,364.0 V329.2 Q173.5,325.2 177.5,325.2 H193.5 Q197.5,325.2 197.5,329.2 V364.0 Z" fill="#eb6834"><title>rigtorp 16 B: 18.64 ± 1.29 M events/s</title></path>
+<line x1="185.5" y1="322.5" x2="185.5" y2="327.9" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="181.5" y1="322.5" x2="189.5" y2="322.5" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="181.5" y1="327.9" x2="189.5" y2="327.9" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<path d="M199.5,364.0 V338.6 Q199.5,334.6 203.5,334.6 H219.5 Q223.5,334.6 223.5,338.6 V364.0 Z" fill="#1baf7a"><title>Boost 16 B: 14.15 ± 0.78 M events/s</title></path>
+<line x1="211.5" y1="332.9" x2="211.5" y2="336.2" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="207.5" y1="332.9" x2="215.5" y2="332.9" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="207.5" y1="336.2" x2="215.5" y2="336.2" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<text x="388.5" y="386.0" font-size="12" fill="#52514e" text-anchor="middle" font-weight="400">64 B</text>
+<path d="M350.5,364.0 V337.5 Q350.5,333.5 354.5,333.5 H370.5 Q374.5,333.5 374.5,337.5 V364.0 Z" fill="#2a78d6"><title>LLE 64 B: 14.67 ± 0.20 M events/s</title></path>
+<line x1="362.5" y1="333.1" x2="362.5" y2="333.9" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="358.5" y1="333.1" x2="366.5" y2="333.1" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="358.5" y1="333.9" x2="366.5" y2="333.9" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<text x="362.5" y="325.1" font-size="12" fill="#0b0b0b" text-anchor="middle" font-weight="600">14.7</text>
+<path d="M376.5,364.0 V335.3 Q376.5,331.3 380.5,331.3 H396.5 Q400.5,331.3 400.5,335.3 V364.0 Z" fill="#eb6834"><title>rigtorp 64 B: 15.71 ± 0.41 M events/s</title></path>
+<line x1="388.5" y1="330.5" x2="388.5" y2="332.2" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="384.5" y1="330.5" x2="392.5" y2="330.5" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="384.5" y1="332.2" x2="392.5" y2="332.2" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<path d="M402.5,364.0 V340.2 Q402.5,336.2 406.5,336.2 H422.5 Q426.5,336.2 426.5,340.2 V364.0 Z" fill="#1baf7a"><title>Boost 64 B: 13.38 ± 0.59 M events/s</title></path>
+<line x1="414.5" y1="334.9" x2="414.5" y2="337.4" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="410.5" y1="334.9" x2="418.5" y2="334.9" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="410.5" y1="337.4" x2="418.5" y2="337.4" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<text x="591.5" y="386.0" font-size="12" fill="#52514e" text-anchor="middle" font-weight="400">256 B</text>
+<path d="M553.5,364.0 V312.1 Q553.5,308.1 557.5,308.1 H573.5 Q577.5,308.1 577.5,312.1 V364.0 Z" fill="#2a78d6"><title>LLE 256 B: 26.89 ± 0.50 M events/s</title></path>
+<line x1="565.5" y1="307.0" x2="565.5" y2="309.1" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="561.5" y1="307.0" x2="569.5" y2="307.0" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="561.5" y1="309.1" x2="569.5" y2="309.1" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<text x="565.5" y="299.0" font-size="12" fill="#0b0b0b" text-anchor="middle" font-weight="600">26.9</text>
+<path d="M579.5,364.0 V347.3 Q579.5,343.3 583.5,343.3 H599.5 Q603.5,343.3 603.5,347.3 V364.0 Z" fill="#eb6834"><title>rigtorp 256 B: 9.95 ± 0.10 M events/s</title></path>
+<line x1="591.5" y1="343.1" x2="591.5" y2="343.5" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="587.5" y1="343.1" x2="595.5" y2="343.1" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="587.5" y1="343.5" x2="595.5" y2="343.5" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<path d="M605.5,364.0 V348.2 Q605.5,344.2 609.5,344.2 H625.5 Q629.5,344.2 629.5,348.2 V364.0 Z" fill="#1baf7a"><title>Boost 256 B: 9.54 ± 0.16 M events/s</title></path>
+<line x1="617.5" y1="343.8" x2="617.5" y2="344.5" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="613.5" y1="343.8" x2="621.5" y2="343.8" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="613.5" y1="344.5" x2="621.5" y2="344.5" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<text x="794.5" y="386.0" font-size="12" fill="#52514e" text-anchor="middle" font-weight="400">1024 B</text>
+<path d="M756.5,364.0 V340.1 Q756.5,336.1 760.5,336.1 H776.5 Q780.5,336.1 780.5,340.1 V364.0 Z" fill="#2a78d6"><title>LLE 1024 B: 13.41 ± 0.14 M events/s</title></path>
+<line x1="768.5" y1="335.8" x2="768.5" y2="336.4" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="764.5" y1="335.8" x2="772.5" y2="335.8" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="764.5" y1="336.4" x2="772.5" y2="336.4" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<text x="768.5" y="327.8" font-size="12" fill="#0b0b0b" text-anchor="middle" font-weight="600">13.4</text>
+<path d="M782.5,364.0 V349.3 Q782.5,345.3 786.5,345.3 H802.5 Q806.5,345.3 806.5,349.3 V364.0 Z" fill="#eb6834"><title>rigtorp 1024 B: 9.01 ± 0.07 M events/s</title></path>
+<line x1="794.5" y1="345.1" x2="794.5" y2="345.4" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="790.5" y1="345.1" x2="798.5" y2="345.1" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="790.5" y1="345.4" x2="798.5" y2="345.4" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<path d="M808.5,364.0 V353.6 Q808.5,349.6 812.5,349.6 H828.5 Q832.5,349.6 832.5,353.6 V364.0 Z" fill="#1baf7a"><title>Boost 1024 B: 6.95 ± 0.12 M events/s</title></path>
+<line x1="820.5" y1="349.3" x2="820.5" y2="349.8" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="816.5" y1="349.3" x2="824.5" y2="349.3" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+<line x1="816.5" y1="349.8" x2="824.5" y2="349.8" stroke="#52514e" stroke-width="1.5" stroke-linecap="round" opacity="1"/>
+</svg>

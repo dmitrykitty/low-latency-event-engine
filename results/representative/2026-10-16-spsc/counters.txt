@@ -1,0 +1,6 @@
+before_latency irq_cpu2=35416 irq_cpu4=31781 throttle=0 pkg_temp_c=42.0
+after_latency irq_cpu2=37026 irq_cpu4=66828 throttle=0 pkg_temp_c=46.0
+before_throughput irq_cpu2=37026 irq_cpu4=66828 throttle=0 pkg_temp_c=47.0
+after_throughput irq_cpu2=115594 irq_cpu4=67639 throttle=0 pkg_temp_c=47.0
+latency processes=384 voluntary_ctx=808 involuntary_ctx=1158 elapsed_s=842.4
+throughput processes=360 voluntary_ctx=13290 involuntary_ctx=26206 elapsed_s=726.1

@@ -1,0 +1,6 @@
+# Commit ce4ae8d, Intel Core i7-10750H laptop on AC power, Linux 7.0.0-34-generic, GCC 15.2.0 -O3.
+# Kernel command line added: isolcpus=2,4 nohz_full=2,4 rcu_nocbs=2,4 irqaffinity=0,1,3,5
+# Docker stack and desktop applications stopped before the run.
+sudo scripts/bench/tune.sh apply      # performance governor, turbo off, SMT off
+LLE_PROCESSES=32 LLE_THROUGHPUT_PROCESSES=10 scripts/bench/run_clean.sh
+sudo scripts/bench/tune.sh restore
