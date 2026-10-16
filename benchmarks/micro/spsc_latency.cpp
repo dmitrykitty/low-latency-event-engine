@@ -195,14 +195,27 @@ Result run_pingpong(
     const std::uint64_t total = options.warmup + options.samples;
     const bool pause = options.pause;
 
-    Queue<N> requests{queue_capacity};
-    Queue<N> responses{queue_capacity};
+    // guarded heap blocks at seeded page offsets; see lle_bench::layout.
+    const auto request_block = lle_bench::layout::make_placed<Queue<N>>(queue_capacity);
+    const auto response_block = lle_bench::layout::make_placed<Queue<N>>(queue_capacity);
+    auto& requests = *request_block;
+    auto& responses = *response_block;
 
     std::atomic<bool> ready{false};
     std::atomic<bool> start{false};
     std::exception_ptr echo_error;
 
-    std::jthread echo([&] {
+    // capture by value what the echo loop reads, so it never polls the initiator's stack.
+    std::jthread echo([&ready,
+                       &start,
+                       &echo_error,
+                       in = &requests,
+                       out = &responses,
+                       total,
+                       pause,
+                       echo_cpu] {
+        const std::uint64_t round_trips = total;
+        const bool spin_pause = pause;
         try {
             pin_and_verify(echo_cpu);
         } catch (...) {
@@ -218,9 +231,9 @@ Result run_pingpong(
         while (!start.load(std::memory_order_acquire)) {
             _mm_pause();
         }
-        for (std::uint64_t i = 0; i < total; ++i) {
+        for (std::uint64_t i = 0; i < round_trips; ++i) {
             // echo the whole payload so it really crosses cores in both directions.
-            while (!requests.try_consume([&](const lle::EventView& event) {
+            while (!in->try_consume([&](const lle::EventView& event) {
                 response.sequence = event.sequence;
                 response.timestamp = event.source_timestamp_ns;
                 std::memcpy(
@@ -229,10 +242,10 @@ Result run_pingpong(
                     std::min(event.payload.size(), N)
                 );
             })) {
-                spin(pause);
+                spin(spin_pause);
             }
-            while (!responses.try_push(response)) {
-                spin(pause);
+            while (!out->try_push(response)) {
+                spin(spin_pause);
             }
         }
     });
@@ -452,6 +465,7 @@ Options parse_options(int argc, char** argv) {
 int main(int argc, char** argv) {
     try {
         const auto options = parse_options(argc, argv);
+        const auto layout_seed = lle_bench::layout::init_from_env();
         const int initiator_cpu = util::read_cpu("LLE_PRODUCER_CPU");
         const int echo_cpu = util::read_cpu("LLE_CONSUMER_CPU");
         if (initiator_cpu == echo_cpu) {
@@ -523,6 +537,10 @@ int main(int argc, char** argv) {
                    queue_capacity,
                    options.pause ? "pause" : "busy"
                )
+            << (layout_seed == 0
+                    ? std::string{"- layout: fixed (LLE_LAYOUT_SEED unset or 0)\n"}
+                    : std::format("- layout: offsets within a page randomized, seed {}\n",
+                                  layout_seed))
             << "- values are round-trip ns and include the timer overhead above; not halved\n\n"
             << std::flush;
 
@@ -581,10 +599,10 @@ int main(int argc, char** argv) {
         if (!options.csv_path.empty()) {
             std::ofstream csv{options.csv_path};
             csv << "queue,payload_bytes,rep,samples,min_ns,p50_ns,p90_ns,p99_ns,p999_ns,p9999_"
-                   "ns,max_ns,mean_ns\n";
+                   "ns,max_ns,mean_ns,layout_seed\n";
             for (const auto& r : results) {
                 csv << std::format(
-                    "{},{},{},{},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n",
+                    "{},{},{},{},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{}\n",
                     r.queue,
                     r.payload,
                     r.rep,
@@ -596,7 +614,8 @@ int main(int argc, char** argv) {
                     r.p999,
                     r.p9999,
                     r.max,
-                    r.mean
+                    r.mean,
+                    layout_seed
                 );
             }
             if (!csv) {

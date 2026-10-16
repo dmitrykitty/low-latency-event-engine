@@ -35,7 +35,9 @@ void run_throughput(benchmark::State& state) {
 
     //slots amount
     const auto capacity = static_cast<std::size_t>(state.range(0));
-    Queue<N> queue{capacity};
+    // a guarded heap block at a seeded page offset; see lle_bench::layout.
+    const auto queue_block = lle_bench::layout::make_placed<Queue<N>>(capacity);
+    auto& queue = *queue_block;
     Record<N> record{};
 
     record.stream = 9;
@@ -54,7 +56,13 @@ void run_throughput(benchmark::State& state) {
 
         //not like in java. new tread start to work from constructor time
         //new os tread created and lambda is performed
-        std::jthread consumer([&] {
+        // capture only what the consumer needs; its loop must not read the producer's stack.
+        std::jthread consumer([&consumer_ready,
+                               &start,
+                               &warmup_done,
+                               &correct,
+                               &pin_ok,
+                               consumed = &queue] {
             try {
                 util::pin_to_cpu(consumer_cpu);
             }
@@ -74,10 +82,12 @@ void run_throughput(benchmark::State& state) {
 
             // copy the whole payload out so it really moves to this core.
             std::array<std::byte, N> sink{};
+            // report the result once at the end instead of writing shared state per event.
+            bool all_correct = true;
             for (std::uint64_t expected = 0; expected < warmup_count + event_count; ++expected) {
                 //if empty - try_consume -> false , wait for event in ring
                 //spin waiting for producer put event into buffer
-                while (!queue.try_consume(
+                while (!consumed->try_consume(
                         [&](const lle::EventView& event) {
                             std::memcpy(sink.data(), event.payload.data(),
                                         std::min(event.payload.size(), N));
@@ -87,7 +97,7 @@ void run_throughput(benchmark::State& state) {
                                 &payload_sequence, sink.data(), sizeof payload_sequence
                             );
                             if (event.sequence != expected || payload_sequence != expected) {
-                                correct = false;
+                                all_correct = false;
                             }
                         }
                     ))
@@ -98,6 +108,7 @@ void run_throughput(benchmark::State& state) {
                     warmup_done.store(true, std::memory_order_release);
                 }
             }
+            correct = all_correct;
         });
 
         //waiting for consumer -> ready to consume
@@ -159,18 +170,16 @@ void run_rtt(benchmark::State& state) {
     constexpr std::uint64_t sample_count = 100'000;
     constexpr  std::uint64_t total = warmup_count + sample_count;
 
-    Queue<N> requests{capacity};
-    Queue<N> responses{capacity};
+    // guarded heap blocks at seeded page offsets; see lle_bench::layout.
+    const auto request_block = lle_bench::layout::make_placed<Queue<N>>(capacity);
+    const auto response_block = lle_bench::layout::make_placed<Queue<N>>(capacity);
+    auto& requests = *request_block;
+    auto& responses = *response_block;
 
     Record<N> request{};
     request.stream = 9;
     request.length = static_cast<std::uint32_t>(N);
     request.payload.fill(std::byte{0x5a});
-
-    Record<N> response{};
-    response.stream = 9;
-    response.length = static_cast<std::uint32_t>(N);
-    response.payload.fill(std::byte{0x5a});
 
     std::vector<std::uint64_t> samples(sample_count);
 
@@ -183,7 +192,13 @@ void run_rtt(benchmark::State& state) {
         std::atomic start{false};
         bool pin_ok = true;
 
-        std::jthread consumer([&] {
+        // capture only what the consumer needs; its loop must not touch the producer's stack.
+        std::jthread consumer([&consumer_ready,
+                               &start,
+                               &correct,
+                               &pin_ok,
+                               in = &requests,
+                               out = &responses] {
             try {
                 util::pin_to_cpu(consumer_cpu);
             }
@@ -192,18 +207,24 @@ void run_rtt(benchmark::State& state) {
                 consumer_ready.store(true, std::memory_order_release);
                 return;
             }
+            // the response lives on this thread's stack, not next to the producer's request.
+            Record<N> response{};
+            response.stream = 9;
+            response.length = static_cast<std::uint32_t>(N);
+            response.payload.fill(std::byte{0x5a});
             consumer_ready.store(true, std::memory_order_release);
 
             while (!start.load(std::memory_order_acquire)) {
                 _mm_pause();
             }
 
+            bool all_correct = true;
             for (std::uint64_t expected = 0; expected < total; ++expected) {
                 //get request
-                while (!requests.try_consume(
+                while (!in->try_consume(
                     [&](const lle::EventView& event) {
                         if (event.sequence != expected) {
-                            correct.store(false, std::memory_order_relaxed);
+                            all_correct = false;
                         }
                     }))
                 {
@@ -211,9 +232,12 @@ void run_rtt(benchmark::State& state) {
                 }
                 //send response
                 response.sequence = expected;
-                while (!responses.try_push(response)) {
+                while (!out->try_push(response)) {
                     _mm_pause();
                 }
+            }
+            if (!all_correct) {
+                correct.store(false, std::memory_order_relaxed);
             }
         });
 
@@ -393,6 +417,9 @@ int main(int argc, char** argv) {
 
         benchmark::AddCustomContext("producer_cpu", std::to_string(producer_cpu));
         benchmark::AddCustomContext("consumer_cpu", std::to_string(consumer_cpu));
+        benchmark::AddCustomContext(
+            "layout_seed", std::to_string(lle_bench::layout::init_from_env())
+        );
         benchmark::RunSpecifiedBenchmarks();
         benchmark::Shutdown();
 

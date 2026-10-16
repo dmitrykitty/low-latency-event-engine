@@ -12,14 +12,18 @@
 #include <charconv>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <memory>
 #include <new>
 #include <optional>
+#include <random>
 #include <sched.h>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 
 namespace lle_bench {
 
@@ -64,6 +68,126 @@ inline int read_cpu(const char* name) {
 }
 } //namespace util
 
+// Queue latency on this hardware depends on where queue objects and buffers fall inside a
+// 4 KB page (shared cache lines, 128-byte prefetch pairs, 4K aliasing). ASLR moves whole
+// pages only, so every benchmark allocation goes through place_bytes(): each block starts at
+// a random 64-byte multiple within a page, drawn from LLE_LAYOUT_SEED (0 or unset: no shift).
+namespace layout {
+
+inline constexpr std::size_t page_bytes = 4096;
+inline constexpr std::size_t line_bytes = 64;
+// two lines before and after each block, so no neighbouring data shares a 128-byte pair.
+inline constexpr std::size_t guard_bytes = 128;
+
+struct State {
+    std::uint64_t seed{0};
+    std::mt19937_64 rng{};
+};
+
+inline State& state() {
+    static State instance;
+    return instance;
+}
+
+// call once in main() before any queue is constructed.
+inline std::uint64_t init_from_env() {
+    auto& current = state();
+    current.seed = 0;
+    const char* value = std::getenv("LLE_LAYOUT_SEED");
+    if (value != nullptr && *value != '\0') {
+        const std::string_view text{value};
+        const auto* end = text.data() + text.size();
+        const auto [ptr, error] = std::from_chars(text.data(), end, current.seed);
+        if (error != std::errc{} || ptr != end) {
+            throw std::runtime_error("LLE_LAYOUT_SEED must be an unsigned integer");
+        }
+    }
+    current.rng.seed(current.seed);
+    return current.seed;
+}
+
+inline std::size_t next_offset() {
+    auto& current = state();
+    if (current.seed == 0) {
+        return 0;
+    }
+    return static_cast<std::size_t>(current.rng() % (page_bytes / line_bytes)) * line_bytes;
+}
+
+// storage for `bytes` at a seeded 64-byte-aligned offset within a page; logs the placement.
+inline void* place_bytes(std::size_t bytes, std::size_t alignment, const char* what) {
+    if (alignment > line_bytes) {
+        throw std::runtime_error("layout: alignment above 64 bytes is not supported");
+    }
+    const std::size_t offset = next_offset();
+    auto* raw = static_cast<std::byte*>(operator new(
+        guard_bytes + page_bytes + bytes + guard_bytes, std::align_val_t{page_bytes}
+    ));
+    auto* block = raw + guard_bytes + offset;
+    // the guard in front of the block remembers the allocation for release_bytes().
+    std::memcpy(block - sizeof(raw), &raw, sizeof(raw));
+    std::fprintf(
+        stderr, "layout %s bytes=%zu page_offset=%zu\n", what, bytes,
+        static_cast<std::size_t>(reinterpret_cast<std::uintptr_t>(block) % page_bytes)
+    );
+    return block;
+}
+
+inline void release_bytes(void* block) noexcept {
+    if (block == nullptr) {
+        return;
+    }
+    std::byte* raw = nullptr;
+    std::memcpy(&raw, static_cast<std::byte*>(block) - sizeof(raw), sizeof(raw));
+    operator delete(raw, std::align_val_t{page_bytes});
+}
+
+// standard allocator for the baselines' slot arrays, so their buffers move like LLE's.
+template <class T>
+struct PlacedAllocator {
+    using value_type = T;
+
+    PlacedAllocator() noexcept = default;
+    template <class U>
+    PlacedAllocator(const PlacedAllocator<U>&) noexcept {}
+
+    T* allocate(std::size_t count) {
+        return static_cast<T*>(place_bytes(count * sizeof(T), alignof(T), "buffer"));
+    }
+    void deallocate(T* pointer, std::size_t) noexcept { release_bytes(pointer); }
+
+    template <class U>
+    bool operator==(const PlacedAllocator<U>&) const noexcept {
+        return true;
+    }
+};
+
+template <class T>
+struct PlacedDeleter {
+    void operator()(T* pointer) const noexcept {
+        pointer->~T();
+        release_bytes(pointer);
+    }
+};
+
+template <class T>
+using Placed = std::unique_ptr<T, PlacedDeleter<T>>;
+
+// a queue object in its own guarded block at a seeded offset; neither thread's stack or
+// other data can share a cache line with it.
+template <class T, class... Args>
+Placed<T> make_placed(Args&&... args) {
+    void* block = place_bytes(sizeof(T), alignof(T), "object");
+    try {
+        return Placed<T>(new (block) T(std::forward<Args>(args)...));
+    } catch (...) {
+        release_bytes(block);
+        throw;
+    }
+}
+
+} // namespace layout
+
 // data to be sent
 template <std::size_t N>
 struct Record {
@@ -77,9 +201,7 @@ struct Record {
 template <std::size_t N>
 class LLEQueue {
     struct Deleter {
-        void operator()(std::byte* ptr) const {
-            operator delete(ptr, std::align_val_t{64});
-        }
+        void operator()(std::byte* ptr) const { layout::release_bytes(ptr); }
     };
 
 public:
@@ -93,7 +215,7 @@ public:
         if (!size) {
             throw std::runtime_error("invalid configuration");
         }
-        storage_.reset(static_cast<std::byte*>(operator new(*size, std::align_val_t{64})));
+        storage_.reset(static_cast<std::byte*>(layout::place_bytes(*size, 64, "buffer")));
         auto producer = lle::shm::SpscRing::initialize({storage_.get(), *size}, config, 42);
         if (!producer) {
             throw std::runtime_error("cannot initialize ring");
@@ -161,7 +283,7 @@ public:
     }
 
 private:
-    rigtorp::SPSCQueue<Record<N>> queue_;
+    rigtorp::SPSCQueue<Record<N>, layout::PlacedAllocator<Record<N>>> queue_;
 };
 
 template <std::size_t N>
@@ -186,7 +308,9 @@ public:
     }
 
 private:
-    boost::lockfree::spsc_queue<Record<N>> queue_;
+    boost::lockfree::
+        spsc_queue<Record<N>, boost::lockfree::allocator<layout::PlacedAllocator<Record<N>>>>
+            queue_;
 };
 
 } // namespace lle_bench
