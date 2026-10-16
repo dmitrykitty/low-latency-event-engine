@@ -3,6 +3,53 @@
 A C++23/Linux transport for moving small opaque binary events between processes and hosts, with an emphasis on
 predictable tail latency, explicit backpressure, and measurable delivery guarantees.
 
+## Performance
+
+The shared-memory SPSC ring at the core of the engine was benchmarked against
+[rigtorp::SPSCQueue](https://github.com/rigtorp/SPSCQueue) and
+[Boost.Lockfree `spsc_queue`](https://www.boost.org/doc/libs/release/doc/html/lockfree.html)
+under identical conditions. At 16–256-byte payloads **LLE has the lowest ping-pong
+latency** (p50 7–8% below rigtorp and 9–14% below Boost); at 1 KB the three are level.
+**Throughput is 5.2× rigtorp's at 16 bytes, 2.7× at 256 bytes, and 1.5× at 1 KB**;
+rigtorp is ahead at 64 bytes.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/performance/latency-p50-dark.svg">
+  <img alt="Ping-pong p50 latency per process for LLE, rigtorp and Boost at 16, 64, 256 and 1024 bytes" src="figures/performance/latency-p50-light.svg">
+</picture>
+
+Each small dot above is one benchmark process with its own random memory layout.
+LLE's dots stay in a tight cluster, while rigtorp's split into a fast and a slow
+group depending on where its queue object lands; that layout effect, and how the ring
+was made immune to it, is described in the performance report.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/performance/throughput-1024-dark.svg">
+  <img alt="Throughput of LLE, rigtorp and Boost with a 1024-slot queue at 16, 64, 256 and 1024 bytes" src="figures/performance/throughput-1024-light.svg">
+</picture>
+
+| Payload | p50 round trip, ns<br>LLE / rigtorp / Boost | p99 round trip, ns<br>LLE / rigtorp / Boost | Throughput, M events/s<br>LLE / rigtorp / Boost |
+|---:|---:|---:|---:|
+| 16 B | **304** / 328 / 353 | **355** / 404 / 417 | **96.0** / 18.6 / 14.2 |
+| 64 B | **366** / 399 / 408 | **424** / 459 / 455 | 14.7 / **15.7** / 13.4 |
+| 256 B | **527** / 569 / 578 | 624 / 637 / 637 | **26.9** / 10.0 / 9.5 |
+| 1 KB | 893 / 881 / 889 | 962 / 969 / 971 | **13.4** / 9.0 / 7.0 |
+
+Means over 32 latency processes and 10 throughput processes per case; bold marks the
+best value where its 95% confidence interval does not overlap the others. Measured on
+an Intel Core i7-10750H laptop with the benchmark threads on isolated, tickless cores
+at a fixed 2.6 GHz; round trips are not halved. Method, confidence intervals, tail
+percentiles, caveats, and the exact command are in the
+[performance report](docs/performance.md); the raw dataset is in
+[results/representative](results/representative/2026-10-16-spsc/).
+
+Design choices whose effect was measured in A/B runs
+([engineering record](docs/performance.md#engineering-record-spsc-ring-hot-path)):
+each handle caches the other side's cursor instead of reading it on every operation,
+the per-event hot path is inline in the header, handles are cache-line aligned, and
+ring memory starts on a 128-byte boundary so the producer and consumer cursors never
+share a prefetched line pair.
+
 ## Architecture guide
 
 Start with the [component map](docs/architecture.md#current-data-path), then follow
@@ -32,8 +79,9 @@ TSan launcher required when running directly from CLion.
 
 ## Implementation phase I
 
-For the optional Google Benchmark comparison of LLE, Boost, and rigtorp queues,
-see [SPSC benchmark instructions](benchmarks/micro/README.md).
+For the SPSC queue benchmarks (ping-pong latency and throughput against Boost and
+rigtorp), see the [benchmark guide](benchmarks/micro/README.md) and the recorded,
+low-noise runner in [scripts/bench](scripts/bench/README.md).
 
 Implemented:
 
@@ -55,7 +103,7 @@ Implemented:
 The shared-memory ring implementation is complete under the documented single-producer/single-consumer
 and startup assumptions. The basic library data path supports one event per packet
 and serial-unicast fan-out to multiple BestEffort receivers. Sender and receiver
-executables remain scaffolding. Full-path benchmark/provenance tooling is the next step.
+executables remain scaffolding. End-to-end (SHM -> UDP -> SHM) benchmarks are the next step.
 
 See [testing instructions](docs/testing.md) for development and sanitizer checks.
 These are correctness checks, not latency benchmarks.
@@ -89,3 +137,4 @@ challenge-specific integration belongs under **adapters/**.
 - **lle-sender-test**: ingress SHM to UDP sender integration and failure handling.
 - **lle-receiver-test**: UDP to egress SHM receiver integration and the complete local data path.
 - **lle-spsc-benchmark**: optional Release throughput/RTT comparison, enabled with `LLE_BUILD_BENCHMARKS=ON`.
+- **lle-spsc-latency**: optional Release ping-pong latency benchmark (rdtsc, all percentiles), same option.

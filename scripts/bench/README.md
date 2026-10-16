@@ -24,8 +24,9 @@ and the effects that matter depend on offsets within a page, so each process
 also gets its own `LLE_LAYOUT_SEED`: the benchmarks then place every queue
 object and buffer (LLE's ring, rigtorp's and Boost's slot arrays) at a random
 64-byte multiple within its page, with 128-byte guards on both sides. The chosen
-offsets are logged and copied into `latency_runs.csv` / `throughput_runs.csv`. `LLE_MODE=single` keeps the
-older behaviour: one process per benchmark, ASLR disabled, in-process repetitions.
+offsets are logged and copied into `latency_runs.csv` / `throughput_runs.csv`.
+`LLE_MODE=single` keeps the older behaviour: one process per benchmark, ASLR
+disabled, in-process repetitions.
 
 ```sh
 sudo scripts/bench/tune.sh apply      # save current settings, then tune
