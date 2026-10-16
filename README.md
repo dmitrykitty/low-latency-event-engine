@@ -3,6 +3,62 @@
 A C++23/Linux transport for moving small opaque binary events between processes and hosts, with an emphasis on
 predictable tail latency, explicit backpressure, and measurable delivery guarantees.
 
+## Architecture
+
+```mermaid
+flowchart TB
+    accTitle: Current event distribution architecture
+    accDescr: An external producer writes ingress shared memory. Sender encodes one event and sends it over UDP. Receiver decodes it and writes egress shared memory for an external consumer.
+
+    subgraph senderSide["Sender side - local processes"]
+        producer["External<br/>producer"]
+        ingress[("Ingress SHM<br/>SpscRing")]
+        sender["Sender<br/>encode_data / UdpSender"]
+        producer -->|try_publish| ingress
+        ingress -->|try_acquire| sender
+    end
+
+    subgraph receiverSide["Receiver side - local processes"]
+        receiver["Receiver<br/>UdpReceiver / decode_data"]
+        egress[("Egress SHM<br/>SpscRing")]
+        consumer["External<br/>consumer"]
+        receiver -->|try_publish| egress
+        egress -->|try_acquire| consumer
+    end
+
+    sender -->|"LLEP DATA / UDP"| receiver
+
+    classDef application fill:#f8fafc,stroke:#64748b,color:#0f172a
+    classDef engine fill:#e0f2fe,stroke:#0369a1,color:#0f172a
+    classDef sharedMemory fill:#fef3c7,stroke:#b45309,color:#0f172a
+    class producer,consumer application
+    class sender,receiver engine
+    class ingress,egress sharedMemory
+```
+
+An external producer publishes events into an **ingress ring** in POSIX shared memory.
+The **Sender** encodes each event as an LLEP packet and sends it over UDP to one or
+more **Receivers**, which validate it and publish into an **egress ring** for the local
+consumer. Key design points:
+
+- **SPSC rings in shared memory.** One copy into the slot on publish; the consumer gets
+  a zero-copy view that stays valid until it releases the slot. Release/acquire
+  ordering, producer and consumer cursors on separate cache lines, each handle caching
+  the other side's cursor, and ring memory aligned to 128 bytes
+  ([layout and memory model](docs/memory-model.md)).
+- **LLEP**, a versioned little-endian binary protocol over UDP. Packet sequence numbers
+  drive gap detection and duplicate suppression ([protocol](docs/protocol.md)).
+- **Explicit backpressure and accounting.** Publishing into a full ring returns `Full`
+  instead of overwriting; the receiver counts drops and malformed packets.
+- **Separate contracts.** The public API, the shared-memory layout, and the wire
+  protocol are versioned independently, and the transport is payload-agnostic;
+  application-specific integration belongs under **adapters/**.
+
+The [architecture guide](docs/architecture.md) follows one event through the system,
+explains who owns each resource and thread, and describes the sender and receiver
+loops. The [data layout walkthrough](docs/data-flow.md) shows how an event becomes a
+shared-memory slot and then an LLEP packet, down to the encoded bytes.
+
 ## Performance
 
 The shared-memory SPSC ring at the core of the engine was benchmarked against
@@ -50,18 +106,34 @@ the per-event hot path is inline in the header, handles are cache-line aligned, 
 ring memory starts on a 128-byte boundary so the producer and consumer cursors never
 share a prefetched line pair.
 
-## Architecture guide
+## Status
 
-Start with the [component map](docs/architecture.md#current-data-path), then follow
-[one event in the sequence diagram](docs/architecture.md#one-event-from-producer-to-consumer).
-They show how producer, ingress, Sender, Receiver, egress, and consumer connect,
-where payloads are copied, and when ring slots can be reused. The
-[ownership guide](docs/architecture.md#resource-and-thread-ownership) explains who
-creates and unlinks SHM and how to stop the worker threads.
+Implemented and tested:
 
-The [data layout walkthrough](docs/data-flow.md) shows how `EventView` becomes a
-SHM slot and then an LLEP packet, including headers, field offsets, and an example
-with exact encoded bytes.
+- POSIX shared-memory creation, attachment, mapping, close, and owner-controlled unlink.
+- SPSC ring: versioned layout, checked initialization and attachment, publication,
+  acquisition, explicit release, full/empty detection, slot reuse, and draining after
+  publication closure.
+- Single-event LLEP DATA encoding and decoding, and a reusable UDP transport.
+- A library sender (ingress ring -> LLEP DATA -> serial UDP fan-out) and receiver
+  (UDP -> validation -> egress ring) with drop and malformed-packet accounting, plus
+  byte-identical fan-out to 1, 2, and 4 receiver processes.
+- Packet sequencing with exact missing ranges, gap counters, and duplicate/old-packet
+  suppression.
+- 131 GoogleTest unit, integration, and multi-process tests (including a 10-million-event
+  transfer between two processes), clean under ASan/UBSan and TSan.
+- Reproducible SPSC latency and throughput benchmarks against rigtorp and Boost
+  ([benchmark guide](benchmarks/micro/README.md), [recorded runner](scripts/bench/README.md)).
+
+Not implemented yet:
+
+- LLEP batching of several events per DATA packet: specified in the
+  [protocol](docs/protocol.md); the decoder currently rejects batched packets.
+- NACK-based retransmission and ordered recovery: specified; the retransmit window and
+  reorder buffer are still stubs.
+- Sender and receiver executables: the library loops exist, the `lle-sender` and
+  `lle-receiver` programs are scaffolding.
+- End-to-end (shared memory -> UDP -> shared memory) latency and throughput benchmarks.
 
 ## Command-line build
 
@@ -77,51 +149,20 @@ Sanitizer configurations use separate build trees:
 See [testing instructions](docs/testing.md) for integration tests, sanitizer coverage, and the
 TSan launcher required when running directly from CLion.
 
-## Implementation phase I
+## Documentation
 
-For the SPSC queue benchmarks (ping-pong latency and throughput against Boost and
-rigtorp), see the [benchmark guide](benchmarks/micro/README.md) and the recorded,
-low-noise runner in [scripts/bench](scripts/bench/README.md).
+| Document | Contents |
+|---|---|
+| [Architecture](docs/architecture.md) | data path, event sequence, ownership, sender and receiver loops |
+| [Data flow](docs/data-flow.md) | how an event maps onto a ring slot and an LLEP packet, with bytes |
+| [Memory model](docs/memory-model.md) | shared-memory layout, cache-line placement, ordering rules |
+| [Protocol](docs/protocol.md) | LLEP wire format, including the planned batching and NACK messages |
+| [Testing](docs/testing.md) | test map, sanitizer runs, multi-process tests |
+| [Performance](docs/performance.md) | representative results, method, and the optimization record |
+| [Benchmarks](benchmarks/micro/README.md), [runner](scripts/bench/README.md) | how to run and reproduce the benchmarks |
 
-Implemented:
-
-- POSIX shared-memory creation, attachment, mapping, close, and owner-controlled unlink.
-- Versioned ring layout, checked initialization, and attachment validation.
-- Fixed-capacity SPSC publication, acquisition, explicit release, and publication closure.
-- Release/acquire synchronization, full/empty detection, slot reuse, and draining after closure.
-- GoogleTest unit tests, threaded stress testing, and a two-process test transferring 10 million events.
-- Single-event LLEP DATA encoding/decoding and reusable UDP transport.
-- A library sender: ingress SHM -> one DATA packet -> ingress slot release -> serial UDP fan-out.
-  See [sender behavior and usage](docs/architecture.md#basic-sender-loop).
-- A basic library receiver: UDP -> DATA validation -> egress SHM, with malformed
-  packet accounting, explicit drops, and idle shutdown.
-  See [receiver behavior and usage](docs/architecture.md#basic-receiver-loop).
-- A local producer -> sender -> receiver -> consumer integration test.
-- Packet sequencing with exact missing ranges, gap counters, and duplicate/old-packet suppression.
-- Byte-identical fan-out to 1, 2, and 4 destinations, including the full path through receiver processes.
-
-The shared-memory ring implementation is complete under the documented single-producer/single-consumer
-and startup assumptions. The basic library data path supports one event per packet
-and serial-unicast fan-out to multiple BestEffort receivers. Sender and receiver
-executables remain scaffolding. End-to-end (SHM -> UDP -> SHM) benchmarks are the next step.
-
-See [testing instructions](docs/testing.md) for development and sanitizer checks.
-These are correctness checks, not latency benchmarks.
-
-## Planned data path
-
-    external producer
-        -> POSIX shared-memory SPSC ingress
-        -> framing, sequencing, opportunistic batching
-        -> UDP serial-unicast fan-out
-        -> parsing, gap detection, optional ordered recovery
-        -> POSIX shared-memory SPSC egress
-        -> external consumer
-
-The public API, shared-memory layout, and wire protocol are separate contracts. The transport remains payload-agnostic;
-challenge-specific integration belongs under **adapters/**.
-
-## Current targets
+<details>
+<summary>CMake targets</summary>
 
 - **lle**: static library and public headers;
 - **lle-sender**: sender process entry point;
@@ -138,3 +179,5 @@ challenge-specific integration belongs under **adapters/**.
 - **lle-receiver-test**: UDP to egress SHM receiver integration and the complete local data path.
 - **lle-spsc-benchmark**: optional Release throughput/RTT comparison, enabled with `LLE_BUILD_BENCHMARKS=ON`.
 - **lle-spsc-latency**: optional Release ping-pong latency benchmark (rdtsc, all percentiles), same option.
+
+</details>
