@@ -35,7 +35,9 @@ enum class AcquireError : std::uint8_t {
 
 // Uses memory owned by SharedMemorySegment. Keep that segment open while using the ring.
 // One producer and one consumer, each with its own ring handle.
-class SpscRing {
+// Each handle occupies whole cache lines, so a producer handle and a consumer handle kept
+// in one process (threads, tests) never share a line; their per-event writes stay local.
+class alignas(ring_cache_line_bytes) SpscRing {
   public:
     // Calculate the segment size. slot_count must be a power of two and at least 2.
     static std::expected<std::size_t, RingError>
@@ -88,6 +90,9 @@ class SpscRing {
     bool acquired_{false};
     bool initializer_{false};
 };
+
+static_assert(alignof(SpscRing) == ring_cache_line_bytes);
+static_assert(sizeof(SpscRing) % ring_cache_line_bytes == 0);
 
 } // namespace lle::shm
 
