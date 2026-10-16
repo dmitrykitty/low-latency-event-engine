@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="352" viewBox="0 0 960 352" font-family='system-ui, -apple-system, "Segoe UI", sans-serif' role="img">
+<title>Event path: producer, ingress ring, Sender, UDP, Receiver, egress ring, consumer</title>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6f6e69"/></marker></defs>
+<rect width="960" height="352" rx="8" fill="#1a1a19"/>
+<text x="24.0" y="32.0" font-size="15" fill="#f0efec" text-anchor="start" font-weight="600" opacity="1.0">Event path: shared memory → UDP → shared memory</text>
+<text x="24.0" y="52.0" font-size="12" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">One producer and one consumer per ring; one LLEP DATA packet per event; the Sender fans each packet out to every receiver.</text>
+<rect x="16.0" y="72.0" width="408.0" height="266.0" rx="10" fill="#222220" fill-opacity="1.0"/>
+<text x="28.0" y="94.0" font-size="12" fill="#f0efec" text-anchor="start" font-weight="600" opacity="1.0">Sender host</text>
+<rect x="432.0" y="72.0" width="100.0" height="266.0" rx="10" fill="#222220" fill-opacity="1.0"/>
+<text x="444.0" y="94.0" font-size="12" fill="#f0efec" text-anchor="start" font-weight="600" opacity="1.0">Network</text>
+<rect x="540.0" y="72.0" width="404.0" height="266.0" rx="10" fill="#222220" fill-opacity="1.0"/>
+<text x="552.0" y="94.0" font-size="12" fill="#f0efec" text-anchor="start" font-weight="600" opacity="1.0">Receiver host (one of N)</text>
+<rect x="28.0" y="150.0" width="96.0" height="104.0" rx="6" fill="#262624" fill-opacity="1.0" stroke="#383835" stroke-width="1"/>
+<text x="38.0" y="176.0" font-size="13" fill="#f0efec" text-anchor="start" font-weight="600" opacity="1.0">Producer</text>
+<text x="38.0" y="192.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400" opacity="1.0">application</text>
+<text x="38.0" y="212.0" font-size="11.5" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">publishes</text>
+<text x="38.0" y="227.0" font-size="11.5" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">events</text>
+<rect x="148.0" y="150.0" width="140.0" height="104.0" rx="6" fill="#d95926" fill-opacity="0.12" stroke="#383835" stroke-width="1"/>
+<text x="158.0" y="172.0" font-size="13" fill="#f0efec" text-anchor="start" font-weight="600" opacity="1.0">Ingress ring</text>
+<text x="158.0" y="188.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400" opacity="1.0">POSIX shared memory</text>
+<rect x="158.0" y="198.0" width="12.4" height="14.0" rx="2" fill="#d95926" fill-opacity="0.25"/>
+<rect x="173.4" y="198.0" width="12.4" height="14.0" rx="2" fill="#d95926" fill-opacity="0.25"/>
+<rect x="188.8" y="198.0" width="12.4" height="14.0" rx="2" fill="#d95926" fill-opacity="0.85"/>
+<rect x="204.1" y="198.0" width="12.4" height="14.0" rx="2" fill="#d95926" fill-opacity="0.85"/>
+<rect x="219.5" y="198.0" width="12.4" height="14.0" rx="2" fill="#d95926" fill-opacity="0.85"/>
+<rect x="234.9" y="198.0" width="12.4" height="14.0" rx="2" fill="#d95926" fill-opacity="0.25"/>
+<rect x="250.2" y="198.0" width="12.4" height="14.0" rx="2" fill="#d95926" fill-opacity="0.25"/>
+<rect x="265.6" y="198.0" width="12.4" height="14.0" rx="2" fill="#d95926" fill-opacity="0.25"/>
+<text x="158.0" y="230.0" font-size="11" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">in: try_publish (copy)</text>
+<text x="158.0" y="244.0" font-size="11" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">out: try_acquire (view)</text>
+<rect x="312.0" y="150.0" width="100.0" height="104.0" rx="6" fill="#262624" fill-opacity="1.0" stroke="#383835" stroke-width="1"/>
+<path d="M312.0,156.0 Q312.0,150.0 318.0,150.0 H406.0 Q412.0,150.0 412.0,156.0 V154.0 H312.0 Z" fill="#3987e5"/>
+<rect x="312.0" y="150.0" width="100.0" height="4.0" rx="2" fill="#3987e5" fill-opacity="1.0"/>
+<text x="322.0" y="176.0" font-size="13" fill="#f0efec" text-anchor="start" font-weight="600" opacity="1.0">Sender</text>
+<text x="322.0" y="192.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400" opacity="1.0">lle::Sender</text>
+<text x="322.0" y="212.0" font-size="11.5" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">encode LLEP</text>
+<text x="322.0" y="227.0" font-size="11.5" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">release slot</text>
+<rect x="552.0" y="150.0" width="104.0" height="104.0" rx="6" fill="#262624" fill-opacity="1.0" stroke="#383835" stroke-width="1"/>
+<path d="M552.0,156.0 Q552.0,150.0 558.0,150.0 H650.0 Q656.0,150.0 656.0,156.0 V154.0 H552.0 Z" fill="#3987e5"/>
+<rect x="552.0" y="150.0" width="104.0" height="4.0" rx="2" fill="#3987e5" fill-opacity="1.0"/>
+<text x="562.0" y="176.0" font-size="13" fill="#f0efec" text-anchor="start" font-weight="600" opacity="1.0">Receiver</text>
+<text x="562.0" y="192.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400" opacity="1.0">lle::Receiver</text>
+<text x="562.0" y="212.0" font-size="11.5" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">decode, validate</text>
+<text x="562.0" y="227.0" font-size="11.5" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">gap / dup detect</text>
+<rect x="680.0" y="150.0" width="140.0" height="104.0" rx="6" fill="#d95926" fill-opacity="0.12" stroke="#383835" stroke-width="1"/>
+<text x="690.0" y="172.0" font-size="13" fill="#f0efec" text-anchor="start" font-weight="600" opacity="1.0">Egress ring</text>
+<text x="690.0" y="188.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400" opacity="1.0">POSIX shared memory</text>
+<rect x="690.0" y="198.0" width="12.4" height="14.0" rx="2" fill="#d95926" fill-opacity="0.25"/>
+<rect x="705.4" y="198.0" width="12.4" height="14.0" rx="2" fill="#d95926" fill-opacity="0.25"/>
+<rect x="720.8" y="198.0" width="12.4" height="14.0" rx="2" fill="#d95926" fill-opacity="0.85"/>
+<rect x="736.1" y="198.0" width="12.4" height="14.0" rx="2" fill="#d95926" fill-opacity="0.85"/>
+<rect x="751.5" y="198.0" width="12.4" height="14.0" rx="2" fill="#d95926" fill-opacity="0.85"/>
+<rect x="766.9" y="198.0" width="12.4" height="14.0" rx="2" fill="#d95926" fill-opacity="0.25"/>
+<rect x="782.2" y="198.0" width="12.4" height="14.0" rx="2" fill="#d95926" fill-opacity="0.25"/>
+<rect x="797.6" y="198.0" width="12.4" height="14.0" rx="2" fill="#d95926" fill-opacity="0.25"/>
+<text x="690.0" y="230.0" font-size="11" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">in: try_publish (copy)</text>
+<text x="690.0" y="244.0" font-size="11" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">out: try_acquire (view)</text>
+<rect x="844.0" y="150.0" width="88.0" height="104.0" rx="6" fill="#262624" fill-opacity="1.0" stroke="#383835" stroke-width="1"/>
+<text x="854.0" y="176.0" font-size="13" fill="#f0efec" text-anchor="start" font-weight="600" opacity="1.0">Consumer</text>
+<text x="854.0" y="192.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400" opacity="1.0">application</text>
+<text x="854.0" y="212.0" font-size="11.5" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">reads events</text>
+<text x="854.0" y="227.0" font-size="11.5" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">in order</text>
+<path d="M125.0,202.0 C135.5,202.0 135.5,202.0 146.0,202.0" fill="none" stroke="#6f6e69" stroke-width="1.5" opacity="1.0" marker-end="url(#arrow)"/>
+<path d="M289.0,202.0 C299.5,202.0 299.5,202.0 310.0,202.0" fill="none" stroke="#6f6e69" stroke-width="1.5" opacity="1.0" marker-end="url(#arrow)"/>
+<path d="M657.0,202.0 C667.5,202.0 667.5,202.0 678.0,202.0" fill="none" stroke="#6f6e69" stroke-width="1.5" opacity="1.0" marker-end="url(#arrow)"/>
+<path d="M821.0,202.0 C831.5,202.0 831.5,202.0 842.0,202.0" fill="none" stroke="#6f6e69" stroke-width="1.5" opacity="1.0" marker-end="url(#arrow)"/>
+<path d="M412.0,202.0 C482.0,202.0 482.0,202.0 552.0,202.0" fill="none" stroke="#6f6e69" stroke-width="1.5" opacity="1.0" marker-end="url(#arrow)"/>
+<text x="482.0" y="158.0" font-size="11.5" fill="#f0efec" text-anchor="middle" font-weight="600" opacity="1.0">LLEP DATA</text>
+<text x="482.0" y="173.0" font-size="11" fill="#c3c2b7" text-anchor="middle" font-weight="400" opacity="1.0">over UDP,</text>
+<text x="482.0" y="188.0" font-size="11" fill="#c3c2b7" text-anchor="middle" font-weight="400" opacity="1.0">unicast fan-out</text>
+<path d="M414.0,210.0 C483.0,210.0 483.0,283.0 552.0,283.0" fill="none" stroke="#6f6e69" stroke-width="1.5" opacity="0.6" marker-end="url(#arrow)" stroke-dasharray="4 4"/>
+<rect x="552.0" y="272.0" width="104.0" height="22.0" rx="5" fill="#262624" fill-opacity="0.9" stroke="#383835" stroke-width="1"/>
+<text x="562.0" y="287.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400" opacity="1.0">receiver 2</text>
+<path d="M414.0,210.0 C483.0,210.0 483.0,313.0 552.0,313.0" fill="none" stroke="#6f6e69" stroke-width="1.5" opacity="0.6" marker-end="url(#arrow)" stroke-dasharray="4 4"/>
+<rect x="552.0" y="302.0" width="104.0" height="22.0" rx="5" fill="#262624" fill-opacity="0.9" stroke="#383835" stroke-width="1"/>
+<text x="562.0" y="317.0" font-size="11" fill="#898781" text-anchor="start" font-weight="400" opacity="1.0">receiver N</text>
+<text x="28.0" y="284.0" font-size="11" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">The producer creates the ingress SHM; the Sender attaches.</text>
+<text x="28.0" y="300.0" font-size="11" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">A full ring returns Full on publish; nothing is overwritten.</text>
+<text x="28.0" y="316.0" font-size="11" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">Packets carry a session_id and a sequence that grows by 1.</text>
+<text x="680.0" y="284.0" font-size="11" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">The Receiver creates the egress SHM;</text>
+<text x="680.0" y="300.0" font-size="11" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">the consumer attaches. Malformed packets</text>
+<text x="680.0" y="316.0" font-size="11" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">and events that do not fit are dropped</text>
+<text x="680.0" y="332.0" font-size="11" fill="#c3c2b7" text-anchor="start" font-weight="400" opacity="1.0">and counted.</text>
+</svg>

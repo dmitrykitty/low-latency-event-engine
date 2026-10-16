@@ -14,6 +14,9 @@ dark variant (`<name>-light.svg`, `<name>-dark.svg`). Latency charts show every
 process as a dot plus the mean and its 95% confidence interval; the throughput
 chart shows the mean and interval per queue and payload size.
 
+[draw_architecture.py](draw_architecture.py) draws the event-path diagram at the top
+of the [README](../../README.md); `python3 scripts/analysis/draw_architecture.py figures`.
+
 [draw_ring_layout.py](draw_ring_layout.py) draws the SPSC ring's shared-memory
 layout with its 128-byte prefetch pairs for
 [docs/memory-model.md](../../docs/memory-model.md):
