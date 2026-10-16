@@ -71,7 +71,8 @@ inline int read_cpu(const char* name) {
 // Queue latency on this hardware depends on where queue objects and buffers fall inside a
 // 4 KB page (shared cache lines, 128-byte prefetch pairs, 4K aliasing). ASLR moves whole
 // pages only, so every benchmark allocation goes through place_bytes(): each block starts at
-// a random 64-byte multiple within a page, drawn from LLE_LAYOUT_SEED (0 or unset: no shift).
+// a random multiple of its required alignment (at least 64 bytes) within a page, drawn from
+// LLE_LAYOUT_SEED (0 or unset: no shift). Each queue's own alignment contract is honoured.
 namespace layout {
 
 inline constexpr std::size_t page_bytes = 4096;
@@ -106,20 +107,21 @@ inline std::uint64_t init_from_env() {
     return current.seed;
 }
 
-inline std::size_t next_offset() {
+inline std::size_t next_offset(std::size_t step) {
     auto& current = state();
     if (current.seed == 0) {
         return 0;
     }
-    return static_cast<std::size_t>(current.rng() % (page_bytes / line_bytes)) * line_bytes;
+    return static_cast<std::size_t>(current.rng() % (page_bytes / step)) * step;
 }
 
-// storage for `bytes` at a seeded 64-byte-aligned offset within a page; logs the placement.
+// storage for `bytes` at a seeded offset within a page that keeps `alignment` (at least one
+// cache line); logs the placement.
 inline void* place_bytes(std::size_t bytes, std::size_t alignment, const char* what) {
-    if (alignment > line_bytes) {
-        throw std::runtime_error("layout: alignment above 64 bytes is not supported");
+    if (alignment > guard_bytes || (alignment & (alignment - 1)) != 0) {
+        throw std::runtime_error("layout: alignment must be a power of two up to 128 bytes");
     }
-    const std::size_t offset = next_offset();
+    const std::size_t offset = next_offset(alignment < line_bytes ? line_bytes : alignment);
     auto* raw = static_cast<std::byte*>(operator new(
         guard_bytes + page_bytes + bytes + guard_bytes, std::align_val_t{page_bytes}
     ));
@@ -215,7 +217,9 @@ public:
         if (!size) {
             throw std::runtime_error("invalid configuration");
         }
-        storage_.reset(static_cast<std::byte*>(layout::place_bytes(*size, 64, "buffer")));
+        storage_.reset(static_cast<std::byte*>(
+            layout::place_bytes(*size, lle::shm::ring_memory_alignment, "buffer")
+        ));
         auto producer = lle::shm::SpscRing::initialize({storage_.get(), *size}, config, 42);
         if (!producer) {
             throw std::runtime_error("cannot initialize ring");
