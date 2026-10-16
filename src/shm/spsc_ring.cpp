@@ -38,7 +38,7 @@ void fill_preamble(
 bool invalid_memory(std::span<std::byte> memory) {
     // check minimum header size and alignment; callers check the exact segment size.
     return memory.data() == nullptr || memory.size() < sizeof(RingHeader) ||
-           reinterpret_cast<std::uintptr_t>(memory.data()) % alignof(RingHeader) != 0;
+           reinterpret_cast<std::uintptr_t>(memory.data()) % ring_memory_alignment != 0;
 }
 
 bool invalid_layout(const RingPreamble& preamble) {

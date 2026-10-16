@@ -58,6 +58,15 @@ offset header_bytes (version 1: 192)
 
 All major regions and every slot begin on a 64-byte boundary.
 
+The segment itself must start on a 128-byte boundary (`ring_memory_alignment`);
+`initialize()` and `attach()` reject other addresses with `InvalidMemory`. Intel's L2
+spatial prefetcher fetches 128-byte line pairs. With a 128-byte-aligned base, the
+producer cursor (offset 64) shares a pair only with the read-mostly preamble and the
+consumer cursor (offset 128) starts a new pair; with a base at 64 modulo 128 both
+cursors, written by different cores, fall into one pair. In the ping-pong benchmark the
+latter placement was measurably slower. Mapped shared-memory segments are page-aligned,
+so this only constrains rings placed in other memory.
+
 ## Shared-memory preamble
 
 | Offset | Size | Type            | Field                   |

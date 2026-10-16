@@ -34,6 +34,7 @@ enum class AcquireError : std::uint8_t {
 };
 
 // Uses memory owned by SharedMemorySegment. Keep that segment open while using the ring.
+// The memory must start on a ring_memory_alignment (128-byte) boundary.
 // One producer and one consumer, each with its own ring handle.
 // Each handle occupies whole cache lines, so a producer handle and a consumer handle kept
 // in one process (threads, tests) never share a line; their per-event writes stay local.

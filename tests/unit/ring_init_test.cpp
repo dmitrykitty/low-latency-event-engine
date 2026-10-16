@@ -15,7 +15,7 @@ class RingInitTest : public testing::Test {
   protected:
     static constexpr RingConfig config{2, 33};
     static constexpr std::size_t segment_size = 192 + 2 * 128;
-    alignas(64) std::array<std::byte, segment_size + 64> storage;
+    alignas(ring_memory_alignment) std::array<std::byte, segment_size + 64> storage;
 
     void SetUp() override {
         storage.fill(std::byte{0x5a});
@@ -92,9 +92,12 @@ TEST_F(RingInitTest, RejectsWrongSizeWithoutWriting) {
 }
 
 TEST_F(RingInitTest, RejectsMisalignmentWithoutWriting) {
-    auto result = SpscRing::initialize({storage.data() + 1, segment_size}, config, 42);
-    ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), RingError::InvalidMemory);
+    // 64 is cache-line aligned but not on the required 128-byte boundary.
+    for (std::size_t offset : {std::size_t{1}, std::size_t{64}}) {
+        auto result = SpscRing::initialize({storage.data() + offset, segment_size}, config, 42);
+        ASSERT_FALSE(result.has_value());
+        EXPECT_EQ(result.error(), RingError::InvalidMemory);
+    }
     expect_unchanged();
 }
 
@@ -139,6 +142,7 @@ TEST_F(RingAttachTest, PreservesExistingContentsForReadyAndClosedRings) {
 TEST_F(RingAttachTest, RejectsShortMisalignedAndWrongSizeMappings) {
     for (auto bytes : {std::span<std::byte>{}, memory().first(191),
                        std::span<std::byte>{storage.data() + 1, segment_size},
+                       std::span<std::byte>{storage.data() + 64, segment_size},
                        memory().first(segment_size - 1),
                        std::span<std::byte>{storage.data(), segment_size + 1}}) {
         auto result = SpscRing::attach(bytes);

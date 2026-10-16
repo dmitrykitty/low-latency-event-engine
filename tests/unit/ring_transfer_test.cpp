@@ -13,7 +13,7 @@ namespace {
 
 class RingTransferTest : public testing::Test {
   protected:
-    alignas(64) std::array<std::byte, 320> storage{};
+    alignas(ring_memory_alignment) std::array<std::byte, 320> storage{};
     std::optional<SpscRing> producer;
     std::optional<SpscRing> consumer;
     RingHeader* header{};

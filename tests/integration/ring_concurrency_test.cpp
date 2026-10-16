@@ -69,7 +69,7 @@ bool consume(SpscRing& ring, std::uint64_t count, Clock::time_point deadline) {
 }
 
 TEST(RingConcurrencyTest, ThreadsTransferOrderedEventsAndObserveFinalClosure) {
-    alignas(64) std::array<std::byte, 192 + 64 * 64> memory{};
+    alignas(ring_memory_alignment) std::array<std::byte, 192 + 64 * 64> memory{};
     auto producer = SpscRing::initialize(memory, RingConfig{64, 16}, 42);
     ASSERT_TRUE(producer.has_value());
     auto consumer = SpscRing::attach(memory);

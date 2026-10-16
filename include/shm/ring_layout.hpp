@@ -10,6 +10,11 @@
 namespace lle::shm {
 
 inline constexpr std::size_t ring_cache_line_bytes = 64;
+// Ring memory must start on a 128-byte boundary. Intel's L2 spatial prefetcher fetches
+// 128-byte line pairs; at this alignment the producer cursor (offset 64) and the consumer
+// cursor (offset 128) fall into different pairs. In the ping-pong benchmark a ring at a
+// 64-byte but not 128-byte boundary was measurably slower. mmap'ed segments are page-aligned.
+inline constexpr std::size_t ring_memory_alignment = 128;
 inline constexpr std::uint16_t ring_layout_version = 1;
 inline constexpr std::uint16_t ring_header_bytes = 192;
 inline constexpr std::size_t ring_slot_metadata_bytes = 32;
@@ -79,6 +84,7 @@ static_assert(offsetof(RingPreamble, reserved_bytes) == 44);
 static_assert(sizeof(RingCursor) == 64);
 static_assert(alignof(RingCursor) == 64);
 static_assert(sizeof(RingHeader) == ring_header_bytes);
+static_assert(ring_memory_alignment % alignof(RingHeader) == 0);
 static_assert(offsetof(RingHeader, producer) == 64);
 static_assert(offsetof(RingHeader, consumer) == 128);
 static_assert(sizeof(RingSlotHeader) == ring_slot_metadata_bytes);
