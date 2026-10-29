@@ -3,6 +3,7 @@
 // Shared by the throughput and latency benchmarks so every harness drives the
 // three queues through identical adapters.
 
+#include "bench_util.hpp"
 #include "shm/spsc_ring.hpp"
 
 #include <boost/lockfree/spsc_queue.hpp>
@@ -26,47 +27,6 @@
 #include <utility>
 
 namespace lle_bench {
-
-namespace util {
-inline void pin_to_cpu(int cpu) {
-    if (cpu < 0 || cpu >= CPU_SETSIZE) {
-        throw std::runtime_error("cpu id outside supported range");
-    }
-    cpu_set_t cpuset;
-    //reset all cpus
-    CPU_ZERO(&cpuset);
-    CPU_SET(static_cast<std::size_t>(cpu), &cpuset);
-
-    //             current_thread pid
-    if (sched_setaffinity(0, sizeof(cpuset), &cpuset) != 0) {
-        throw std::runtime_error("cannot pin to cpu " + std::to_string(cpu));
-    }
-}
-
-inline int read_cpu(const char* name) {
-    const char* value = std::getenv(name);
-
-    if (value == nullptr) {
-        throw std::runtime_error(std::string{name} + " is not set");
-    }
-
-    int cpu = -1;
-
-    const std::string_view text{value};
-    const auto* end = text.data() + text.size();
-
-    const auto [ptr, error] = std::from_chars(
-        text.data(),
-        end, //to get exactly const char*
-        cpu
-        );
-
-    if (error != std::errc{} || ptr != end || cpu < 0 || cpu >= CPU_SETSIZE) {
-        throw std::runtime_error(std::string{name} + " has invalid CPU id");
-    }
-    return cpu;
-}
-} //namespace util
 
 // Queue latency on this hardware depends on where queue objects and buffers fall inside a
 // 4 KB page (shared cache lines, 128-byte prefetch pairs, 4K aliasing). ASLR moves whole

@@ -45,6 +45,15 @@ using lle_bench::LLEQueue;
 using lle_bench::Record;
 using lle_bench::RigtorpQueue;
 namespace util = lle_bench::util;
+using util::calibrate_tsc;
+using util::escape;
+using util::has_invariant_tsc;
+using util::measure_overhead;
+using util::percentile;
+using util::pin_and_verify;
+using util::read_topology;
+using util::tsc_begin;
+using util::tsc_end;
 using SteadyClock = std::chrono::steady_clock;
 
 constexpr std::size_t queue_capacity = 1024;
@@ -60,11 +69,6 @@ struct Options {
     std::string csv_path;
 };
 
-struct Topology {
-    int package{-1};
-    int core{-1};
-};
-
 struct Result {
     std::string queue;
     std::size_t payload{};
@@ -73,114 +77,10 @@ struct Result {
     double min{}, p50{}, p90{}, p99{}, p999{}, p9999{}, max{}, mean{};
 };
 
-// lfence on both sides stops rdtsc from being reordered with the timed work.
-inline std::uint64_t tsc_begin() noexcept {
-    _mm_lfence();
-    const auto ticks = __rdtsc();
-    _mm_lfence();
-    return ticks;
-}
-
-// rdtscp waits for earlier instructions; the trailing lfence holds back later ones.
-inline std::uint64_t tsc_end() noexcept {
-    unsigned aux = 0;
-    const auto ticks = __rdtscp(&aux);
-    _mm_lfence();
-    return ticks;
-}
-
-// keeps copies into otherwise unread buffers from being optimized away.
-inline void escape(const void* pointer) noexcept {
-    asm volatile("" : : "g"(pointer) : "memory");
-}
-
 inline void spin(bool pause) noexcept {
     if (pause) {
         _mm_pause();
     }
-}
-
-bool has_invariant_tsc() {
-    std::ifstream cpuinfo{"/proc/cpuinfo"};
-    std::string line;
-    while (std::getline(cpuinfo, line)) {
-        if (line.starts_with("flags")) {
-            return line.find(" constant_tsc") != std::string::npos &&
-                   line.find(" nonstop_tsc") != std::string::npos;
-        }
-    }
-    return false;
-}
-
-int read_topology_value(int cpu, std::string_view name) {
-    std::ifstream file{std::format("/sys/devices/system/cpu/cpu{}/topology/{}", cpu, name)};
-    int value = -1;
-    if (!(file >> value)) {
-        throw std::runtime_error(std::format("cannot read topology {} for cpu {}", name, cpu));
-    }
-    return value;
-}
-
-Topology read_topology(int cpu) {
-    return {
-        read_topology_value(cpu, "physical_package_id"),
-        read_topology_value(cpu, "core_id")
-    };
-}
-
-void pin_and_verify(int cpu) {
-    util::pin_to_cpu(cpu);
-    if (sched_getcpu() != cpu) {
-        throw std::runtime_error(std::format("thread is not running on cpu {}", cpu));
-    }
-}
-
-// median of several busy-waited windows; min/max show how stable the estimate is.
-struct TscCalibration {
-    double hz{};
-    double min_hz{};
-    double max_hz{};
-};
-
-TscCalibration calibrate_tsc() {
-    constexpr int windows = 7;
-    constexpr auto window = std::chrono::milliseconds{100};
-    std::vector<double> estimates;
-    for (int i = 0; i < windows; ++i) {
-        const auto wall_begin = SteadyClock::now();
-        const auto tsc0 = tsc_begin();
-        while (SteadyClock::now() - wall_begin < window) {
-        }
-        const auto tsc1 = tsc_end();
-        const auto wall_end = SteadyClock::now();
-        const std::chrono::duration<double> elapsed = wall_end - wall_begin;
-        estimates.push_back(static_cast<double>(tsc1 - tsc0) / elapsed.count());
-    }
-    std::ranges::sort(estimates);
-    return {estimates[estimates.size() / 2], estimates.front(), estimates.back()};
-}
-
-struct ClockOverhead {
-    double min_ns{};
-    double median_ns{};
-};
-
-// cost of one back-to-back timestamp pair, i.e. what each sample includes.
-template <class Read> ClockOverhead measure_overhead(Read read_pair) {
-    constexpr std::size_t count = 1'000'000;
-    std::vector<double> values(count);
-    for (auto& value : values) {
-        value = read_pair();
-    }
-    std::ranges::sort(values);
-    return {values.front(), values[count / 2]};
-}
-
-// nearest-rank percentile on sorted data.
-std::uint64_t
-percentile(const std::vector<std::uint64_t>& sorted, std::uint64_t count, double p) {
-    const auto rank = static_cast<std::uint64_t>(std::ceil(p * static_cast<double>(count)));
-    return sorted[std::clamp<std::uint64_t>(rank, 1, count) - 1];
 }
 
 template <template <std::size_t> class Queue, std::size_t N>
