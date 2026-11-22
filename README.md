@@ -92,10 +92,15 @@ Implemented and tested:
 - A library sender (ingress ring -> LLEP DATA -> serial UDP fan-out) and receiver
   (UDP -> validation -> egress ring) with drop and malformed-packet accounting, plus
   byte-identical fan-out to 1, 2, and 4 receiver processes.
+- `lle-sender` and `lle-receiver` programs, a demo producer and consumer, and a script
+  that runs all four as separate processes over UDP ([programs](apps/README.md)).
+- An end-to-end benchmark of the whole path on one host: one-way latency and throughput
+  with loss accounting ([system benchmarks](benchmarks/system/README.md)).
 - Packet sequencing with exact missing ranges, gap counters, and duplicate/old-packet
   suppression.
 - 131 GoogleTest unit, integration, and multi-process tests (including a 10-million-event
-  transfer between two processes), clean under ASan/UBSan and TSan.
+  transfer between two processes) and a four-program end-to-end test, clean under
+  ASan/UBSan and TSan.
 - Reproducible SPSC latency and throughput benchmarks against rigtorp and Boost
   ([benchmark guide](benchmarks/micro/README.md), [recorded runner](scripts/bench/README.md)).
 
@@ -105,9 +110,8 @@ Not implemented yet:
   [protocol](docs/protocol.md); the decoder currently rejects batched packets.
 - NACK-based retransmission and ordered recovery: specified; the retransmit window and
   reorder buffer are still stubs.
-- Sender and receiver executables: the library loops exist, the `lle-sender` and
-  `lle-receiver` programs are scaffolding.
-- End-to-end (shared memory -> UDP -> shared memory) latency and throughput benchmarks.
+- Representative end-to-end results: the benchmark exists, a clean run on isolated
+  cores has not been recorded yet.
 
 ## Command-line build
 
@@ -134,13 +138,15 @@ TSan launcher required when running directly from CLion.
 | [Testing](docs/testing.md) | test map, sanitizer runs, multi-process tests |
 | [Performance](docs/performance.md) | representative results, method, and the optimization record |
 | [Benchmarks](benchmarks/micro/README.md), [runner](scripts/bench/README.md) | how to run and reproduce the benchmarks |
+| [Programs](apps/README.md), [system benchmarks](benchmarks/system/README.md) | running the engine as separate processes, end-to-end measurement |
 
 <details>
 <summary>CMake targets</summary>
 
 - **lle**: static library and public headers;
-- **lle-sender**: sender process entry point;
-- **lle-receiver**: receiver process entry point;
+- **lle-sender**: sender program (ingress ring -> UDP);
+- **lle-receiver**: receiver program (UDP -> egress ring);
+- **lle-demo-producer**, **lle-demo-consumer**: demo endpoints for running the programs;
 - **lle-udp-smoke**: standalone UDP smoke program;
 - **lle-smoke-test**: minimal CTest target validating the toolchain and public types.
 - **lle-byte-io-test**, **lle-encoder-test**, **lle-decoder-test**: single-event protocol unit tests;
@@ -153,5 +159,6 @@ TSan launcher required when running directly from CLion.
 - **lle-receiver-test**: UDP to egress SHM receiver integration and the complete local data path.
 - **lle-spsc-benchmark**: optional Release throughput/RTT comparison, enabled with `LLE_BUILD_BENCHMARKS=ON`.
 - **lle-spsc-latency**: optional Release ping-pong latency benchmark (rdtsc, all percentiles), same option.
+- **lle-e2e-benchmark**: optional Release end-to-end benchmark (SHM -> UDP loopback -> SHM), same option.
 
 </details>

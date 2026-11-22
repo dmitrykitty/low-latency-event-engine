@@ -27,6 +27,7 @@ below.
 | `lle.sender.` | Ingress SHM to UDP and sender failure handling | [sender_test.cpp](../tests/integration/sender_test.cpp) |
 | `lle.receiver.` | UDP to egress SHM, gap/duplicate/session counters, suppression of repeat delivery, and the complete local producer-to-consumer path | [receiver_test.cpp](../tests/integration/receiver_test.cpp) |
 | `lle.fanout.` | Full path through 1, 2, and 4 receiver processes and their separate egress rings | [fanout_process_test.cpp](../tests/integration/fanout_process_test.cpp) |
+| `lle.apps.` | The four programs as separate processes over UDP loopback; every event must arrive intact | [run_local.sh](../scripts/demo/run_local.sh) |
 
 These are correctness checks. Two-host full-path delivery, fan-out performance, recovery,
 parser fuzzing, and end-to-end latency measurements remain separate work.
